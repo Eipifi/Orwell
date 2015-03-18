@@ -1,82 +1,67 @@
 package sig
 import (
     "crypto/ecdsa"
+    "crypto/x509"
     "encoding/asn1"
+    "math/big"
     "crypto/rand"
     "crypto/elliptic"
-    "crypto/x509"
-    "errors"
-    "math/big"
 )
 
-type asn1EcdsaSignature struct {
+// ECDSA Public Key
+
+type ecdsaPubKey struct {
+    obj *ecdsa.PublicKey
+}
+
+type ecdsaSignature struct {
     R, S *big.Int
 }
 
-type lPubKey struct {
-    key *ecdsa.PublicKey
+func (key ecdsaPubKey) Serialize() []byte {
+    data, _ := x509.MarshalPKIXPublicKey(key.obj)
+    return data
 }
 
-type lPrvKey struct {
-    key *ecdsa.PrivateKey
+func (key ecdsaPubKey) Id() ID {
+    return Hash(key.Serialize())
 }
 
-func NewPrvKey() PrvKey {
-    var curve elliptic.Curve = elliptic.P256()
-    key, _ := ecdsa.GenerateKey(curve, rand.Reader)
-    return lPrvKey{key}
+func (key ecdsaPubKey) Verify(data []byte, signature []byte) bool {
+    sequence := ecdsaSignature{}
+    rest, err := asn1.Unmarshal(signature, &sequence)
+    if (len(rest) != 0) || (err != nil) {
+        return false
+    } else {
+        return ecdsa.Verify(key.obj, HashSlice(data), sequence.R, sequence.S)
+    }
 }
 
-func (k lPubKey) Id() ID {
-    return Hash(k.Marshal())
+// ECDSA Private Key
+
+type ecdsaPrvKey struct {
+    obj *ecdsa.PrivateKey
 }
 
-func (k lPrvKey) Id() ID {
-    return k.PublicPart().Id()
+func (key ecdsaPrvKey) Serialize() []byte {
+    data, _ := x509.MarshalECPrivateKey(key.obj)
+    return data
 }
 
-func (k lPrvKey) PublicPart() PubKey {
-    return lPubKey{&k.key.PublicKey}
+func (key ecdsaPrvKey) PublicPart() PubKey {
+    return ecdsaPubKey{&key.obj.PublicKey}
 }
 
-func (k lPrvKey) Sign(data []byte) []byte {
-    r, s, _ := ecdsa.Sign(rand.Reader, k.key, HashSlice(data))
-    sequence := asn1EcdsaSignature{r, s}
+func (key ecdsaPrvKey) Sign(data []byte) []byte {
+    r, s, _ := ecdsa.Sign(rand.Reader, key.obj, HashSlice(data))
+    sequence := ecdsaSignature{r, s}
     result, _ := asn1.Marshal(sequence)
     return result
 }
 
-func (k lPubKey) Verify(data []byte, signature []byte) bool {
-    sequence := new(asn1EcdsaSignature)
-    rest, err := asn1.Unmarshal(signature, sequence)
+// Other
 
-    if (len(rest) != 0) || (err != nil) {
-        return false
-    } else {
-        return ecdsa.Verify(k.key, HashSlice(data), sequence.R, sequence.S)
-    }
-}
-
-func (k lPubKey) Marshal() []byte {
-    data, _ := x509.MarshalPKIXPublicKey(k.key)
-    return data
-}
-
-func (k lPrvKey) Marshal() []byte {
-    data, _ := x509.MarshalECPrivateKey(k.key)
-    return data
-}
-
-func UnmarshalPK(data []byte) (PubKey, error) {
-    pub, err := x509.ParsePKIXPublicKey(data)
-    if err != nil {
-        return nil, err
-    } else {
-        switch key := pub.(type) {
-            case *ecdsa.PublicKey:
-                return lPubKey{key}, nil
-            default:
-                return nil, errors.New("x509: only RSA and ECDSA public keys supported")
-        }
-    }
+func NewEcdsaPrvKey() PrvKey {
+    key, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+    return ecdsaPrvKey{key}
 }

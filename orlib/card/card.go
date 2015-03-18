@@ -46,7 +46,7 @@ func MarshalPayload(card *Card) ([]byte, error) {
 
 func Marshal(card *Card) ([]byte, error) {
     c := Asn1Card {}
-    c.Key = card.Key.Marshal()
+    c.Key = card.Key.Serialize()
     c.Payload.Version = card.Version
     c.Payload.Expires = card.Expires.Unix()
     c.Payload.Records = card.Records
@@ -64,7 +64,7 @@ func Unmarshal(data []byte) (*Card, error) {
         return nil, err
     }
     card := Card{}
-    card.Key, err = sig.UnmarshalPK(c.Key)
+    card.Key, err = sig.ParsePubKey(c.Key)
     if err != nil {
         return nil, err
     }
