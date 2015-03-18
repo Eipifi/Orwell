@@ -64,7 +64,7 @@ func Unmarshal(data []byte) (*Card, error) {
         return nil, err
     }
     card := Card{}
-    card.Key, err = sig.UnmarshalPubKey(c.Key)
+    card.Key, err = sig.UnmarshalPK(c.Key)
     if err != nil {
         return nil, err
     }
