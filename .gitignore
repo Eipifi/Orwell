@@ -121,3 +121,6 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# Development source code
+debug/
