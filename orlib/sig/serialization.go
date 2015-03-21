@@ -27,5 +27,12 @@ func ParsePubKey(derBytes []byte) (PubKey, error) {
 }
 
 func ParsePrvKey(derBytes []byte) (PrvKey, error) {
+    prv, err := x509.ParseECPrivateKey(derBytes)
+    if err != nil {
+        return nil, err
+    } else {
+        key := ecdsaPrvKey{prv}
+        return key, nil
+    }
     return nil, errors.New("Not yet implemented")
 }

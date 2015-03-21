@@ -4,6 +4,8 @@ import (
     "fmt"
     "os"
     "orwell/ortool/genkey"
+    "orwell/ortool/gencard"
+    "orwell/ortool/read"
 )
 
 const usage = `Ortool is a handy tool for Orwell protocol.
@@ -70,4 +72,6 @@ type module struct {
 
 var modules = map[string] module {
     "genkey": module{genkey.Usage, genkey.Main},
+    "gencard": module{gencard.Usage, gencard.Main},
+    "read": module{read.Usage, read.Main},
 }
