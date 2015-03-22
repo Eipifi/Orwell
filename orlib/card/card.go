@@ -86,7 +86,7 @@ func (payload *Payload) MarshalASN1() []byte {
 }
 
 func (payload *Payload) MarshalJSON() []byte {
-    b, err := json.Marshal(*payload)
+    b, err := json.MarshalIndent(*payload, "", "    ")
     if err != nil {
         panic(err)
     }
