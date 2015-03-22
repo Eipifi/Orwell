@@ -1,100 +1,104 @@
 package card
+
 import (
-    "orwell/orlib/sig"
     "time"
+    "orwell/orlib/sig"
     "encoding/asn1"
+    "encoding/json"
     "errors"
 )
 
+// The card structure
 type Card struct {
     Key sig.PubKey
-    Version int64
-    Expires time.Time
-    Records []Record
+    Payload *Payload
     Signature []byte
 }
 
-type Asn1Card struct {
-    Key []byte // The standard does not specify key structure, future expansion possible (move to PublicKeySpecInfo?)
-    Payload   Asn1Payload
+// ASN1 compatible card structure
+type asn1Card struct {
+    Key []byte
+    Payload Payload
     Signature []byte
 }
 
-type Asn1Payload struct {
-    Version int64
-    Expires int64
-    Records []Record
+// Card payload (the part signed with private key)
+type Payload struct {
+    Version int64 `json:"version"`
+    Expires int64 `json:"expires"`
+    Records []Record `json:"records"`
 }
 
+// Record type
 type Record struct {
-    Key string `asn1:"utf8"`
-    Type string `asn1:"utf8"`
-    Value string `asn1:"utf8"`
+    Key string `asn1:"utf8" json:"key"`
+    Type string `asn1:"utf8" json:"type"`
+    Value string `asn1:"utf8" json:"value"`
 }
 
-func MarshalPayload(card *Card) ([]byte, error) {
-    if card == nil {
-        return nil, errors.New("Nil card value provided")
-    }
-    // TODO: inspect the consequences of int64/uint64 overflow
-    payload := Asn1Payload{}
-    payload.Version = card.Version
-    payload.Expires = card.Expires.Unix()
-    payload.Records = card.Records
-    return asn1.Marshal(payload)
+////////////////////////////////////
+
+func (card *Card) Marshal() ([]byte, error) {
+    ac := asn1Card{card.Key.Serialize(), *(card.Payload), card.Signature}
+    return asn1.Marshal(ac)
 }
 
-func Marshal(card *Card) ([]byte, error) {
-    c := Asn1Card {}
-    c.Key = card.Key.Serialize()
-    c.Payload.Version = card.Version
-    c.Payload.Expires = card.Expires.Unix()
-    c.Payload.Records = card.Records
-    c.Signature = card.Signature
-    return asn1.Marshal(c)
+func (card *Card) Sign(key sig.PrvKey) {
+    card.Signature = key.Sign(card.Payload.MarshalASN1())
+    card.Key = key.PublicPart()
+}
+
+func (card *Card) Verify() bool {
+    return card.Key.Verify(card.Payload.MarshalASN1(), card.Signature)
 }
 
 func Unmarshal(data []byte) (*Card, error) {
-    c := Asn1Card{}
-    rest, err := asn1.Unmarshal(data, &c)
+    ac := asn1Card{}
+    rest, err := asn1.Unmarshal(data, &ac)
     if len(rest) > 0 {
-        return nil, errors.New("Serialized card too long (bytes remaining)")
+        return nil, errors.New("Unnecesary bytes remaining")
     }
     if err != nil {
         return nil, err
     }
-    card := Card{}
-    card.Key, err = sig.ParsePubKey(c.Key)
+    card := Card{nil, &(ac.Payload), ac.Signature}
+    card.Key, err = sig.ParsePubKey(ac.Key)
     if err != nil {
         return nil, err
     }
-    card.Version = c.Payload.Version
-    card.Expires = time.Unix(c.Payload.Expires, 0)
-    card.Records = c.Payload.Records
-    card.Signature = c.Signature
-    if Verify(&card) {
-        return &card, nil
-    } else {
+    if !card.Verify() {
         return nil, errors.New("Card verification failed")
     }
+    return &card, nil
+
 }
 
-func Sign(card *Card, key sig.PrvKey) error {
-    payload, err := MarshalPayload(card)
-    if err != nil {
-        return err
-    } else {
-        card.Signature = key.Sign(payload)
-        card.Key = key.PublicPart()
-        return nil
-    }
+func (card *Card) ExpirationDate() time.Time {
+    return time.Unix(card.Payload.Expires, 0)
 }
 
-func Verify(card *Card) bool {
-    payload, err := MarshalPayload(card)
+func (payload *Payload) MarshalASN1() []byte {
+    b, err := asn1.Marshal(*payload)
     if err != nil {
-        return false
-    } else {
-        return card.Key.Verify(payload, card.Signature)
+        panic(err)
     }
+    return b
+}
+
+func (payload *Payload) MarshalJSON() []byte {
+    b, err := json.Marshal(*payload)
+    if err != nil {
+        panic(err)
+    }
+    return b
+}
+
+func Create(jsonPayload []byte, key sig.PrvKey) (*Card, error) {
+    jp := Payload{}
+    if json.Unmarshal(jsonPayload, &jp) != nil {
+        return nil, errors.New("Failed to deserialize json card payload")
+    }
+    card := Card{nil, &jp, nil}
+    card.Sign(key)
+    return &card, nil
 }
