@@ -27,6 +27,7 @@ func ParsePubKey(derBytes []byte) (PubKey, error) {
 }
 
 func ParsePrvKey(derBytes []byte) (PrvKey, error) {
+    // TODO: it would be nice to check if the key is valid (sign and verify anything) before returning.
     prv, err := x509.ParseECPrivateKey(derBytes)
     if err != nil {
         return nil, err

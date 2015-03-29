@@ -16,7 +16,7 @@ type Card struct {
 }
 
 // ASN1 compatible card structure
-type asn1Card struct {
+type Asn1Card struct {
     Key []byte
     Payload Payload
     Signature []byte
@@ -39,7 +39,7 @@ type Record struct {
 ////////////////////////////////////
 
 func (card *Card) Marshal() ([]byte, error) {
-    ac := asn1Card{card.Key.Serialize(), *(card.Payload), card.Signature}
+    ac := Asn1Card{card.Key.Serialize(), *(card.Payload), card.Signature}
     return asn1.Marshal(ac)
 }
 
@@ -53,7 +53,7 @@ func (card *Card) Verify() bool {
 }
 
 func Unmarshal(data []byte) (*Card, error) {
-    ac := asn1Card{}
+    ac := Asn1Card{}
     rest, err := asn1.Unmarshal(data, &ac)
     if len(rest) > 0 {
         return nil, errors.New("Unnecesary bytes remaining")
@@ -61,16 +61,19 @@ func Unmarshal(data []byte) (*Card, error) {
     if err != nil {
         return nil, err
     }
-    card := Card{nil, &(ac.Payload), ac.Signature}
-    card.Key, err = sig.ParsePubKey(ac.Key)
+    return UnmarshalStruct(&ac)
+}
+
+func UnmarshalStruct(ac *Asn1Card) (*Card, error) {
+    key, err := sig.ParsePubKey(ac.Key)
     if err != nil {
         return nil, err
     }
+    card := Card{key, &(ac.Payload), ac.Signature}
     if !card.Verify() {
         return nil, errors.New("Card verification failed")
     }
     return &card, nil
-
 }
 
 func (card *Card) ExpirationDate() time.Time {
