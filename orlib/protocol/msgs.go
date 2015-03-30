@@ -35,7 +35,7 @@ type Handshake struct {
     Address *Address
 }
 
-func (m *Handshake) Command() { return CodeHandshake }
+func (m *Handshake) Command() uint64 { return CodeHandshake }
 
 func (m *Handshake) WriteTo(w *Writer) {
     w.WriteUint32(m.Magic)
@@ -64,13 +64,34 @@ func (r *Reader) ReadHandshake() (msg *Handshake, err error) {
 }
 
 // </Handshake> ------------------------------------------------------------------------
+// <HandshakeAck> ----------------------------------------------------------------------
+const CodeHandshakeAck = 0x81
 
-func (f *Frame) Unpack() (interface{}, error) {
+type HandshakeAck struct { }
+
+func (m *HandshakeAck) Command() uint64 { return CodeHandshakeAck }
+
+func (m *HandshakeAck) WriteTo(w * Writer) { }
+
+func (r *Reader) ReadHandshakeAck() (*HandshakeAck, error) { return &HandshakeAck{}, nil }
+
+// </HandshakeAck> ---------------------------------------------------------------------
+
+func (f *Frame) Unpack() (Message, error) {
     r := NewBytesReader(f.Payload)
     switch f.Command {
         case CodeHandshake:
             return r.ReadHandshake()
+        case CodeHandshakeAck:
+            return r.ReadHandshakeAck()
         default:
             return nil, errors.New("Unknown command code")
     }
+}
+
+func (r *Reader) ReadMessage() (m Message, err error) {
+    var f *Frame
+    if f, err = r.ReadFrame(); err != nil { return }
+    if m, err = f.Unpack(); err != nil { return }
+    return
 }

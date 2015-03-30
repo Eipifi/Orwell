@@ -2,7 +2,6 @@ package protocol
 import (
     "io"
     "encoding/binary"
-    "errors"
     "bytes"
     "orwell/orlib/sig"
 )
@@ -99,8 +98,8 @@ func (r *Reader) ReadAddress() (addr *Address, err error) {
 }
 
 func (r *Reader) ReadID() (id *sig.ID, err error) {
-    id = &sig.ID
-    _, err = r.ReadTo(id[:])
+    id = &sig.ID{}
+    err = r.ReadTo(id[:])
     return
 }
 
