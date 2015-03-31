@@ -31,15 +31,15 @@ type msgTypeEntry struct {
 }
 
 var msgTypes = []msgTypeEntry {
-    msgTypeEntry{0x01, reflect.TypeOf(&Handshake{})},
-    msgTypeEntry{0x81, reflect.TypeOf(&HandshakeAck{})},
-    msgTypeEntry{0x02, reflect.TypeOf(&Get{})},
+    msgTypeEntry{0x01, reflect.TypeOf(Handshake{})},
+    msgTypeEntry{0x81, reflect.TypeOf(HandshakeAck{})},
+    msgTypeEntry{0x02, reflect.TypeOf(Get{})},
 }
 
 func GetMsgCommand(m Msg) uint64 {
     t := reflect.TypeOf(m)
     for _, e := range msgTypes {
-        if e.Type == t {
+        if t == reflect.PtrTo(e.Type) {
             return e.Command
         }
     }
@@ -49,8 +49,7 @@ func GetMsgCommand(m Msg) uint64 {
 func GetCommandMsg(c uint64) Msg {
     for _, e := range msgTypes {
         if e.Command == c {
-            v := reflect.New(e.Type)
-            return v.Interface().(Msg)
+            return reflect.New(e.Type).Interface().(Msg)
         }
     }
     return nil
