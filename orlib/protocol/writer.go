@@ -88,10 +88,3 @@ func (w *Writer) WriteAddress(a *Address) {
     w.WriteUint16(a.Port)
     w.WriteUint64(a.Nonce)
 }
-
-func (w *Writer) WriteMessage(m Message) {
-    w.WriteVaruint(m.Command())
-    v := NewWriter()
-    m.WriteTo(v)
-    w.WriteVarBytes(v.Peek())
-}

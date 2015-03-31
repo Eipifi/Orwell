@@ -1,5 +1,6 @@
 package protocol
 import (
+    "reflect"
     "errors"
 )
 
@@ -15,9 +16,9 @@ NEIGHBOURS	: id
 
 */
 
-type Message interface {
-    Command() uint64
-    WriteTo(w *Writer)
+type Msg interface {
+    Read(r *Reader) error
+    Write(w *Writer)
 }
 
 type Frame struct {
@@ -25,8 +26,58 @@ type Frame struct {
     Payload []byte
 }
 
-// <Handshake> -------------------------------------------------------------------------
-const CodeHandshake = 0x01
+type msgTypeEntry struct {
+    Command uint64
+    Type reflect.Type
+}
+
+var msgTypes = []msgTypeEntry {
+    msgTypeEntry{0x01, reflect.TypeOf(Handshake{})},
+}
+
+func GetMsgCommand(m Msg) uint64 {
+    t := reflect.TypeOf(m)
+    for _, e := range msgTypes {
+        if e.Type == t {
+            return e.Command
+        }
+    }
+    return 0x00
+}
+
+func GetCommandMsg(c uint64) Msg {
+    for _, e := range msgTypes {
+        if e.Command == c {
+            v := reflect.New(e.Type)
+            return v.Interface().(Msg)
+        }
+    }
+    return nil
+}
+
+func (w *Writer) WriteFramedMessage(m Msg) {
+    v := NewWriter()
+    m.Write(v)
+    w.WriteVaruint(GetMsgCommand(m))
+    w.Write(v.Peek())
+}
+
+func (r *Reader) ReadFramedMessage() (m Msg, err error) {
+    var f *Frame
+    if f, err = r.ReadFrame(); err != nil { return }
+    if m = GetCommandMsg(f.Command); m == nil { return nil, errors.New("Unrecognized message type") }
+    if err = m.Read(NewBytesReader(f.Payload)); err != nil { return }
+    return
+}
+
+func (r *Reader) ReadSpecificFramedMessage(m Msg) (err error) {
+    var f *Frame
+    if f, err = r.ReadFrame(); err != nil { return }
+    if f.Command != GetMsgCommand(m) { return errors.New("Unexpected message type") }
+    return m.Read(NewBytesReader(f.Payload))
+}
+
+///////////////////////////////////////////////////////////////////////////
 
 type Handshake struct {
     Magic uint32
@@ -35,9 +86,20 @@ type Handshake struct {
     Address *Address
 }
 
-func (m *Handshake) Command() uint64 { return CodeHandshake }
+func (m *Handshake) Read(r *Reader) (err error) {
+    if m.Magic, err = r.ReadUint32(); err != nil { return }
+    if m.Version, err = r.ReadVaruint(); err != nil { return }
+    if m.UserAgent, err = r.ReadStr(); err != nil { return }
 
-func (m *Handshake) WriteTo(w *Writer) {
+    var f uint8
+    if f, err = r.ReadUint8(); err != nil { return }
+    if f & 0x01 > 0 {
+        if m.Address, err = r.ReadAddress(); err != nil { return }
+    }
+    return
+}
+
+func (m *Handshake) Write(w *Writer) {
     w.WriteUint32(m.Magic)
     w.WriteVaruint(m.Version)
     w.WriteString(m.UserAgent)
@@ -49,70 +111,12 @@ func (m *Handshake) WriteTo(w *Writer) {
     }
 }
 
-func (r *Reader) ReadHandshake(msg *Handshake) (err error) {
-    if msg.Magic, err = r.ReadUint32(); err != nil { return }
-    if msg.Version, err = r.ReadVaruint(); err != nil { return }
-    if msg.UserAgent, err = r.ReadStr(); err != nil { return }
-
-    var f uint8
-    if f, err = r.ReadUint8(); err != nil { return }
-    if f & 0x01 > 0 {
-        if msg.Address, err = r.ReadAddress(); err != nil { return }
-    }
-    return
-}
-
-// </Handshake> ------------------------------------------------------------------------
-// <HandshakeAck> ----------------------------------------------------------------------
-const CodeHandshakeAck = 0x81
+///////////////////////////////////////////////////////////////////////////
 
 type HandshakeAck struct { }
 
-func (m *HandshakeAck) Command() uint64 { return CodeHandshakeAck }
+func (m *HandshakeAck) Read(r *Reader) error { return nil }
 
-func (m *HandshakeAck) WriteTo(w * Writer) { }
+func (m *HandshakeAck) Write(w *Writer) { }
 
-func (r *Reader) ReadHandshakeAck(*HandshakeAck) (error) { return nil }
-
-// </HandshakeAck> ---------------------------------------------------------------------
-
-func (r *Reader) ReadAnyMessage() (m Message, err error) {
-    var f *Frame
-    if f, err = r.ReadFrame(); err != nil { return }
-    return Switch1(NewBytesReader(f.Payload), f.Command)
-}
-
-func (r *Reader) ReadMessage(m Message) (err error) {
-    var f *Frame
-    if f, err = r.ReadFrame(); err != nil { return }
-    if f.Command != m.Command() { errors.New("Unexpected frame command") }
-    return Switch2(NewBytesReader(f.Payload), m)
-}
-
-// TODO: unify these two switch statements
-
-func Switch1(r *Reader, command uint64) (m Message, err error) {
-    switch command {
-        case CodeHandshake:
-            msg := Handshake{}
-            err = r.ReadHandshake(&msg)
-            return &msg, err
-        case CodeHandshakeAck:
-            msg := HandshakeAck{}
-            err = r.ReadHandshakeAck(&msg)
-            return &msg, err
-        default:
-            return nil, errors.New("Unknown frame command")
-    }
-}
-
-func Switch2(r *Reader, m Message) error {
-    switch m.Command() {
-        case CodeHandshake:
-            return r.ReadHandshake(m.(*Handshake))
-        case CodeHandshakeAck:
-            return r.ReadHandshakeAck(m.(*HandshakeAck))
-        default:
-            return errors.New("Unknown frame command")
-    }
-}
+///////////////////////////////////////////////////////////////////////////
