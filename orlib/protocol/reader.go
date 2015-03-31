@@ -97,8 +97,8 @@ func (r *Reader) ReadAddress() (addr *Address, err error) {
     return
 }
 
-func (r *Reader) ReadID() (id *sig.ID, err error) {
-    id = &sig.ID{}
+func (r *Reader) ReadID() (id sig.ID, err error) {
+    id = sig.ID{}
     err = r.ReadTo(id[:])
     return
 }

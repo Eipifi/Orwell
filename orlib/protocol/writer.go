@@ -2,6 +2,7 @@ package protocol
 import (
     "io"
     "bytes"
+    "orwell/orlib/sig"
 )
 
 
@@ -87,4 +88,8 @@ func (w *Writer) WriteAddress(a *Address) {
     w.Write(a.IP[:])
     w.WriteUint16(a.Port)
     w.WriteUint64(a.Nonce)
+}
+
+func (w *Writer) WriteID(id *sig.ID) {
+    w.Write(id[:])
 }

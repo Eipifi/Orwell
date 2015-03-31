@@ -2,11 +2,10 @@ package protocol
 import (
     "reflect"
     "errors"
+    "orwell/orlib/sig"
 )
 
 /*
-HELLO		: magic, pv, [id], [address]
-HELLO_ACK	: magic, pv, id
 GET			: token, ttl, id, version
 CARD		: token, card
 NOPE		: token, ttl
@@ -32,7 +31,9 @@ type msgTypeEntry struct {
 }
 
 var msgTypes = []msgTypeEntry {
-    msgTypeEntry{0x01, reflect.TypeOf(Handshake{})},
+    msgTypeEntry{0x01, reflect.TypeOf(&Handshake{})},
+    msgTypeEntry{0x81, reflect.TypeOf(&HandshakeAck{})},
+    msgTypeEntry{0x02, reflect.TypeOf(&Get{})},
 }
 
 func GetMsgCommand(m Msg) uint64 {
@@ -59,7 +60,7 @@ func (w *Writer) WriteFramedMessage(m Msg) {
     v := NewWriter()
     m.Write(v)
     w.WriteVaruint(GetMsgCommand(m))
-    w.Write(v.Peek())
+    w.WriteVarBytes(v.Peek())
 }
 
 func (r *Reader) ReadFramedMessage() (m Msg, err error) {
@@ -118,5 +119,29 @@ type HandshakeAck struct { }
 func (m *HandshakeAck) Read(r *Reader) error { return nil }
 
 func (m *HandshakeAck) Write(w *Writer) { }
+
+///////////////////////////////////////////////////////////////////////////
+
+type Get struct {
+    Token uint64
+    TTL uint8
+    ID sig.ID
+    Version uint64
+}
+
+func (m *Get) Read(r *Reader) (err error) {
+    if m.Token, err = r.ReadUint64(); err != nil { return }
+    if m.TTL, err = r.ReadUint8(); err != nil { return }
+    if m.ID, err = r.ReadID(); err != nil { return }
+    if m.Version, err = r.ReadVaruint(); err != nil { return }
+    return
+}
+
+func (m *Get) Write(w *Writer) {
+    w.WriteUint64(m.Token)
+    w.WriteUint8(m.TTL)
+    w.WriteID(&m.ID)
+    w.WriteVaruint(m.Version)
+}
 
 ///////////////////////////////////////////////////////////////////////////
