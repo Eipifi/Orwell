@@ -5,16 +5,6 @@ import (
     "orwell/orlib/sig"
 )
 
-/*
-GET			: token, ttl, id, version
-CARD		: token, card
-NOPE		: token, ttl
-PUT			: token, ttl, card
-SAVED		: token, ttl
-NEIGHBOURS	: id
-
-*/
-
 type Msg interface {
     Read(r *Reader) error
     Write(w *Writer)
@@ -32,8 +22,10 @@ type msgTypeEntry struct {
 
 var msgTypes = []msgTypeEntry {
     msgTypeEntry{0x01, reflect.TypeOf(Handshake{})},
-    msgTypeEntry{0x81, reflect.TypeOf(HandshakeAck{})},
     msgTypeEntry{0x02, reflect.TypeOf(Get{})},
+    msgTypeEntry{0x81, reflect.TypeOf(HandshakeAck{})},
+    msgTypeEntry{0x82, reflect.TypeOf(CardFound{})},
+    msgTypeEntry{0x83, reflect.TypeOf(CardNotFound{})},
 }
 
 func GetMsgCommand(m Msg) uint64 {
@@ -66,8 +58,7 @@ func (r *Reader) ReadFramedMessage() (m Msg, err error) {
     var f *Frame
     if f, err = r.ReadFrame(); err != nil { return }
     if m = GetCommandMsg(f.Command); m == nil { return nil, errors.New("Unrecognized message type") }
-    if err = m.Read(NewBytesReader(f.Payload)); err != nil { return }
-    return
+    return m.Read(NewBytesReader(f.Payload))
 }
 
 func (r *Reader) ReadSpecificFramedMessage(m Msg) (err error) {
@@ -144,3 +135,37 @@ func (m *Get) Write(w *Writer) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+
+type CardFound struct {
+    Token uint64
+    Card []byte
+}
+
+func (m *CardFound) Read(r *Reader) (err error) {
+    if m.Token, err = r.ReadUint64(); err != nil { return }
+    if m.Card, err = r.ReadVarBytes(); err != nil { return }
+    return
+}
+
+func (m *CardFound) Write(w *Writer) {
+    w.WriteUint64(m.Token)
+    w.WriteVarBytes(m.Card)
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+type CardNotFound struct {
+    Token uint64
+    TTL uint8
+}
+
+func (m *CardNotFound) Read(r *Reader) (err error) {
+    if m.Token, err = r.ReadUint64(); err != nil { return }
+    if m.TTL, err = r.ReadUint8(); err != nil { return }
+    return
+}
+
+func (m *CardNotFound) Write(w *Writer) {
+    w.WriteUint64(m.Token)
+    w.WriteUint8(m.TTL)
+}
