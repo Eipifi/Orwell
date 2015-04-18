@@ -1,6 +1,9 @@
 package sig
 
-import "crypto/sha256"
+import (
+	"crypto/sha256"
+	"encoding/hex"
+)
 
 const HashLengthBytes = 32
 const HashLengthBits = HashLengthBytes * 8
@@ -13,4 +16,8 @@ func Hash(data []byte) ID {
 func HashSlice(data []byte) []byte {
 	h := Hash(data)
 	return h[:]
+}
+
+func (id *ID) String() string {
+	return hex.EncodeToString(id[:])
 }
