@@ -98,8 +98,8 @@ func (payload *Payload) MarshalJSON() []byte {
 
 func Create(jsonPayload []byte, key sig.PrvKey) (*Card, error) {
     jp := Payload{}
-    if json.Unmarshal(jsonPayload, &jp) != nil {
-        return nil, errors.New("Failed to deserialize json card payload")
+    if err := json.Unmarshal(jsonPayload, &jp); err != nil {
+        return nil, err
     }
     card := Card{nil, &jp, nil}
     card.Sign(key)

@@ -46,14 +46,14 @@ func Main(args []string) {
     key, err := sig.ParsePrvKey(b.Bytes)
     if err == nil {
         fmt.Println("PRIVATE KEY")
-        fmt.Printf("ID: %x\n", key.PublicPart().Id())
+        fmt.Printf("ID: %s\n", key.PublicPart().Id())
         os.Exit(0)
     }
 
     c, err := card.Unmarshal(b.Bytes)
     if err == nil {
         fmt.Println("CARD")
-        fmt.Printf("ID: %x\n", c.Key.Id())
+        fmt.Printf("ID: %s\n", c.Key.Id())
         fmt.Printf("%s\n", c.Payload.MarshalJSON())
         os.Exit(0)
     }

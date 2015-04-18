@@ -13,6 +13,20 @@ const Usage = `usage: ortool gencard --payload PAYLOAD --key KEY
 
 Gencard creates a new card from a JSON card payload and private key.
 
+Example payload structure:
+
+{
+    "version": 42,
+    "expires": 123123123,
+    "records": [
+        {
+            "key": "kittens",
+            "type": "http",
+            "value": "ip=192.168.0.10 ca=cafebabeaa"
+        }
+    ]
+}
+
 `
 
 func Main(args []string) {
