@@ -25,6 +25,6 @@ func (m *Manager) Lifecycle() {
     }
 }
 
-func (m *Manager) PickPeer(id sig.ID) *Peer {
+func (m *Manager) PickPeer(id *sig.ID) *Peer {
     return nil
 }

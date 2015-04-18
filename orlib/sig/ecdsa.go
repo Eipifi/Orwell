@@ -23,7 +23,7 @@ func (key ecdsaPubKey) Serialize() []byte {
     return data
 }
 
-func (key ecdsaPubKey) Id() ID {
+func (key ecdsaPubKey) Id() *ID {
     return Hash(key.Serialize())
 }
 

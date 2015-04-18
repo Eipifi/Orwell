@@ -9,8 +9,9 @@ const HashLengthBytes = 32
 const HashLengthBits = HashLengthBytes * 8
 type ID [HashLengthBytes]byte
 
-func Hash(data []byte) ID {
-	return sha256.Sum256(data)
+func Hash(data []byte) *ID {
+	var id ID = sha256.Sum256(data)
+	return &id
 }
 
 func HashSlice(data []byte) []byte {

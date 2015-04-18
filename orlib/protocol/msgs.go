@@ -115,7 +115,7 @@ func (m *HandshakeAck) Write(w *Writer) { }
 type Get struct {
     Token Token
     TTL TTL
-    ID sig.ID
+    ID *sig.ID
     Version uint64
 }
 
@@ -130,7 +130,7 @@ func (m *Get) Read(r *Reader) (err error) {
 func (m *Get) Write(w *Writer) {
     w.WriteToken(m.Token)
     w.WriteTTL(m.TTL)
-    w.WriteID(&m.ID)
+    w.WriteID(m.ID)
     w.WriteVaruint(m.Version)
 }
 

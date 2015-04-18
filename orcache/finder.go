@@ -2,7 +2,7 @@ package main
 import "orwell/orlib/protocol"
 
 func Find(msg *protocol.Get, env *Env) *GetResponse {
-    Info.Println("Initiating search for card", &msg.ID)
+    Info.Println("Initiating search for card", msg.ID)
 
     if data := env.Cache.Get(msg.ID); data != nil {
         return &GetResponse{data, 0}
@@ -13,7 +13,7 @@ func Find(msg *protocol.Get, env *Env) *GetResponse {
 
     ttl := msg.TTL
     for {
-        Info.Println("Retrying (ttl:", ttl, ") to find card", &msg.ID)
+        Info.Println("Retrying (ttl:", ttl, ") to find card", msg.ID)
         if ttl == 0 { break }
         ttl -= 1
 

@@ -3,7 +3,7 @@ package sig
 
 type PubKey interface {
     Serializable
-    Id() ID
+    Id() *ID
     Verify(data []byte, signature []byte) bool
 }
 
