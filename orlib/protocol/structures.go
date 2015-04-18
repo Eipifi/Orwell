@@ -13,3 +13,6 @@ func (a *Address) Id() sig.ID {
     ByteOrder.PutUint64(b[16:24], a.Nonce)
     return sig.Hash(b[:])
 }
+
+type TTL uint8
+type Token uint64

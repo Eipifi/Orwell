@@ -58,7 +58,7 @@ func (r *Reader) ReadFramedMessage() (m Msg, err error) {
     var f *Frame
     if f, err = r.ReadFrame(); err != nil { return }
     if m = GetCommandMsg(f.Command); m == nil { return nil, errors.New("Unrecognized message type") }
-    return m.Read(NewBytesReader(f.Payload))
+    return m, m.Read(NewBytesReader(f.Payload))
 }
 
 func (r *Reader) ReadSpecificFramedMessage(m Msg) (err error) {
@@ -113,23 +113,23 @@ func (m *HandshakeAck) Write(w *Writer) { }
 ///////////////////////////////////////////////////////////////////////////
 
 type Get struct {
-    Token uint64
-    TTL uint8
+    Token Token
+    TTL TTL
     ID sig.ID
     Version uint64
 }
 
 func (m *Get) Read(r *Reader) (err error) {
-    if m.Token, err = r.ReadUint64(); err != nil { return }
-    if m.TTL, err = r.ReadUint8(); err != nil { return }
+    if m.Token, err = r.ReadToken(); err != nil { return }
+    if m.TTL, err = r.ReadTTL(); err != nil { return }
     if m.ID, err = r.ReadID(); err != nil { return }
     if m.Version, err = r.ReadVaruint(); err != nil { return }
     return
 }
 
 func (m *Get) Write(w *Writer) {
-    w.WriteUint64(m.Token)
-    w.WriteUint8(m.TTL)
+    w.WriteToken(m.Token)
+    w.WriteTTL(m.TTL)
     w.WriteID(&m.ID)
     w.WriteVaruint(m.Version)
 }
@@ -137,35 +137,35 @@ func (m *Get) Write(w *Writer) {
 ///////////////////////////////////////////////////////////////////////////
 
 type CardFound struct {
-    Token uint64
+    Token Token
     Card []byte
 }
 
 func (m *CardFound) Read(r *Reader) (err error) {
-    if m.Token, err = r.ReadUint64(); err != nil { return }
+    if m.Token, err = r.ReadToken(); err != nil { return }
     if m.Card, err = r.ReadVarBytes(); err != nil { return }
     return
 }
 
 func (m *CardFound) Write(w *Writer) {
-    w.WriteUint64(m.Token)
+    w.WriteToken(m.Token)
     w.WriteVarBytes(m.Card)
 }
 
 ///////////////////////////////////////////////////////////////////////////
 
 type CardNotFound struct {
-    Token uint64
-    TTL uint8
+    Token Token
+    TTL TTL
 }
 
 func (m *CardNotFound) Read(r *Reader) (err error) {
-    if m.Token, err = r.ReadUint64(); err != nil { return }
-    if m.TTL, err = r.ReadUint8(); err != nil { return }
+    if m.Token, err = r.ReadToken(); err != nil { return }
+    if m.TTL, err = r.ReadTTL(); err != nil { return }
     return
 }
 
 func (m *CardNotFound) Write(w *Writer) {
-    w.WriteUint64(m.Token)
-    w.WriteUint8(m.TTL)
+    w.WriteToken(m.Token)
+    w.WriteTTL(m.TTL)
 }

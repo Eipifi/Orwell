@@ -109,3 +109,17 @@ func (r *Reader) ReadFrame() (frame *Frame, err error) {
     if frame.Payload, err = r.ReadVarBytes(); err != nil { return }
     return
 }
+
+func (r *Reader) ReadTTL() (ttl TTL, err error) {
+    var v uint8
+    v, err = r.ReadUint8()
+    ttl = TTL(v)
+    return
+}
+
+func (r *Reader) ReadToken() (token Token, err error) {
+    var v uint64
+    v, err = r.ReadUint64()
+    token = Token(v)
+    return
+}
