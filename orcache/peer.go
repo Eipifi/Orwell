@@ -4,8 +4,6 @@ import (
     "orwell/orlib/protocol"
 )
 
-const OrcacheMagic = 0xf4eed077
-const SupportedVersion = 1
 const UserAgent = "Orcache"
 
 type Peer struct {
@@ -65,7 +63,7 @@ func (p *Peer) exchangeHandshakes() (err error) {
     w := protocol.NewWriter()
 
     // Send our Handshake
-    w.WriteFramedMessage(&protocol.Handshake{OrcacheMagic, SupportedVersion, UserAgent, nil})
+    w.WriteFramedMessage(&protocol.Handshake{protocol.OrcacheMagic, protocol.SupportedVersion, UserAgent, nil})
     if err = w.Commit(p.conn); err != nil { return }
 
     // Await for the Handshake
@@ -97,8 +95,11 @@ func (p *Peer) handleJob(job *GetJob) {
 }
 
 func (p *Peer) sendMsg(msg protocol.Msg) {
-    // todo: pass to chan and assess the connection state
+    // todo: assess the connection state
     Info.Println("Sent message", msg, "to peer", p.conn.RemoteAddr())
+    w := protocol.NewWriter()
+    w.WriteFramedMessage(msg)
+    w.Commit(p.conn)
 }
 
 func (p *Peer) handleMsg(msg protocol.Msg) {
@@ -135,10 +136,10 @@ func (p *Peer) HandleGet(msg *protocol.Get) {
     go func(){
         result := Find(msg, p.env)
         if result.Bytes == nil {
-            Info.Println("Card", &msg.ID, "not found, responsing to peer", p.conn.RemoteAddr())
+            Info.Println("Card", msg.ID, "not found, responsing to peer", p.conn.RemoteAddr())
             p.MaybeSendMsg(&protocol.CardNotFound{msg.Token, result.TTL})
         } else {
-            Info.Println("Card", &msg.ID, "found, responsing to peer", p.conn.RemoteAddr())
+            Info.Println("Card", msg.ID, "found, responsing to peer", p.conn.RemoteAddr())
             p.MaybeSendMsg(&protocol.CardFound{msg.Token, result.Bytes})
         }
     }()
