@@ -1,44 +1,62 @@
 package main
 import (
-    "orwell/orlib/protocol"
     "net"
-    "fmt"
-    "errors"
+    "orwell/orlib/protocol"
 )
 
-const OrcacheMagic = 0x04cac11e
+const OrcacheMagic = 0xf4eed077
 const SupportedVersion = 1
 const UserAgent = "Orcache"
 
-var connectionCounter uint64 = 0
-
 type Peer struct {
+    Upstream chan protocol.Msg
+    NewJobs chan *GetJob
+
+    jobs map[protocol.Token] *GetJob
+    downstream <-chan protocol.Msg
     conn net.Conn
     hs *protocol.Handshake
-    num uint64
     env *Env
+    alive bool
 }
 
-func RunPeer(conn net.Conn, env *Env) {
-    p := Peer{conn: conn, num: connectionCounter, env: env}
-    connectionCounter += 1
-    go func(){
-        p.log(p.handle())
-        p.log(p.conn.Close())
-    }()
+func NewPeer(conn net.Conn, env *Env) (*Peer) {
+    p := &Peer{}
+    p.Upstream = make(chan protocol.Msg)
+    p.NewJobs = make(chan *GetJob)
+    p.conn = conn
+    p.alive = true
+    p.env = env
+    return p
 }
 
-func (p *Peer) RelayGet(m *protocol.Get) <-chan *GetResponse {
-    ch := make(chan *GetResponse, 1)
-    /*
-        if peer still active {
-            put the get message on queue
-        } else {
-            ch <- nil
-            close(ch)
+func (p *Peer) Lifecycle() {
+    Info.Println("Connected to peer", p.conn.RemoteAddr())
+    defer p.Close()
+    if err := p.exchangeHandshakes(); err != nil { return }
+    Info.Println("Successfully exchanged handshakes with", p.conn.RemoteAddr())
+    p.downstream = readMessages(p.conn)
+    for {
+        if !p.alive { break }
+        select {
+            case job := <- p.NewJobs:
+                p.handleJob(job)
+            case msg := <- p.Upstream:
+                p.sendMsg(msg)
+            case msg := <- p.downstream:
+                if msg == nil { return }
+                p.handleMsg(msg)
         }
-    */
-    return ch
+    }
+}
+
+func (p *Peer) Close() {
+    if !p.alive { return }
+    Info.Println("Closing connection with peer", p.conn.RemoteAddr())
+    p.alive = false
+    close(p.Upstream)
+    close(p.NewJobs)
+    p.conn.Close()
 }
 
 func (p *Peer) exchangeHandshakes() (err error) {
@@ -64,14 +82,85 @@ func (p *Peer) exchangeHandshakes() (err error) {
     return
 }
 
-func (p *Peer) handle() (err error) {
-    if err = p.exchangeHandshakes(); err != nil { return }
-    // TODO: handle messages
-    return
+func (p *Peer) handleJob(job *GetJob) {
+    Info.Println("Received job", job, "for peer", p.conn.RemoteAddr())
+    // So we received a job. Let's look at it.
+    if _, ok := p.jobs[job.Msg.Token]; ok {
+        // Hmm. It looks like we are already dealing with a job of this ID.
+        // We cannot interfere with it. Therefore we quit the job immediately.
+        job.Fail()
+    } else {
+        // Ok, this token is unknown. We can proceed.
+        p.jobs[job.Msg.Token] = job
+        p.sendMsg(job.Msg)
+    }
 }
 
-func (p *Peer) log(err error) {
-    if err != nil {
-        fmt.Printf("Peer %d: %x\n", p.num, err)
+func (p *Peer) sendMsg(msg protocol.Msg) {
+    // todo: pass to chan and assess the connection state
+    Info.Println("Sent message", msg, "to peer", p.conn.RemoteAddr())
+}
+
+func (p *Peer) handleMsg(msg protocol.Msg) {
+    Info.Println("Received message", msg, "from peer", p.conn.RemoteAddr())
+    // Switch over message type
+    switch msg := msg.(type) {
+        case *protocol.Get:
+        p.HandleGet(msg)
+
+        case *protocol.CardFound:
+        p.HandleCardFound(msg)
+
+        case *protocol.CardNotFound:
+        p.HandleCardNotFound(msg)
+
+        default:
+        panic("Unrecognized message type")
     }
+}
+
+func (p *Peer) MaybeSendMsg(msg protocol.Msg) bool {
+    return Maybe(func(){
+        p.Upstream <- msg
+    })
+}
+
+func (p *Peer) MaybeSendJob(job *GetJob) bool {
+    return Maybe(func(){
+        p.NewJobs <- job
+    })
+}
+
+func (p *Peer) HandleGet(msg *protocol.Get) {
+    go func(){
+        result := Find(msg, p.env)
+        if result.Bytes == nil {
+            Info.Println("Card", &msg.ID, "not found, responsing to peer", p.conn.RemoteAddr())
+            p.MaybeSendMsg(&protocol.CardNotFound{msg.Token, result.TTL})
+        } else {
+            Info.Println("Card", &msg.ID, "found, responsing to peer", p.conn.RemoteAddr())
+            p.MaybeSendMsg(&protocol.CardFound{msg.Token, result.Bytes})
+        }
+    }()
+}
+
+func (p *Peer) HandleCardFound(msg *protocol.CardFound) {
+    p.completeJob(msg.Token, &GetResponse{msg.Card, 0})
+}
+
+func (p *Peer) HandleCardNotFound(msg *protocol.CardNotFound) {
+    p.completeJob(msg.Token, &GetResponse{nil, msg.TTL})
+}
+
+func (p *Peer) completeJob(token protocol.Token, resp *GetResponse) {
+    // Fetch the specified job
+    job, ok := p.jobs[token]
+    // Do we have it?
+    if !ok {
+        p.Close()
+        return
+    }
+    // Send the response and clean up
+    job.Sink <- resp
+    delete(p.jobs, token)
 }
