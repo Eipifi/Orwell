@@ -3,6 +3,7 @@ package sig
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 )
 
 const HashLengthBytes = 32
@@ -17,6 +18,15 @@ func Hash(data []byte) *ID {
 func HashSlice(data []byte) []byte {
 	h := Hash(data)
 	return h[:]
+}
+
+func HexToID(h string) (*ID, error) {
+	b, err := hex.DecodeString(h)
+	if err != nil { return nil, err }
+	if len(b) != HashLengthBytes { return nil, errors.New("Invalid hex length") }
+	id := ID{}
+	copy(id[:], b)
+	return &id, nil
 }
 
 func (id *ID) String() string {
