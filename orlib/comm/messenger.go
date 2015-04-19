@@ -14,7 +14,7 @@ type Messenger struct {
     af MsgAllocFunc
 }
 
-func NewMessager(conn net.Conn, rf MsgReadFunc, wf MsgWriteFunc, af MsgAllocFunc) *Messenger {
+func NewMessenger(conn net.Conn, rf MsgReadFunc, wf MsgWriteFunc, af MsgAllocFunc) *Messenger {
     return &Messenger{conn: conn, r: NewReader(conn), w: NewWriter(), rf: rf, wf: wf, af: af}
 }
 

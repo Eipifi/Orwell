@@ -40,10 +40,7 @@ func (p *Peer) Lifecycle(conn net.Conn) {
     go func(){
         for {
             m, e := p.ms.ReadAny()
-            if e != nil {
-                fmt.Println(e)
-                break
-            }
+            if e != nil { break }
             p.downstream <- m
         }
         close(p.downstream)
@@ -90,16 +87,23 @@ func (p *Peer) sendMsg(msg comm.Msg) {
 }
 
 func (p *Peer) handleMsg(msg comm.Msg) {
+    fmt.Println("received", msg)
     // Switch over message type
     switch msg := msg.(type) {
         case *orcache.Get:
-        p.HandleGet(msg)
+            p.HandleGet(msg)
 
         case *orcache.CardFound:
-        p.HandleCardFound(msg)
+            p.HandleCardFound(msg)
 
         case *orcache.CardNotFound:
-        p.HandleCardNotFound(msg)
+            p.HandleCardNotFound(msg)
+
+        case *orcache.Publish:
+            p.HandlePublish(msg)
+
+        case *orcache.Published:
+            p.HandlePublished(msg)
 
         default:
         panic("Unrecognized message type")
@@ -135,6 +139,22 @@ func (p *Peer) HandleCardFound(msg *orcache.CardFound) {
 
 func (p *Peer) HandleCardNotFound(msg *orcache.CardNotFound) {
     p.completeJob(msg.Token, &GetResponse{nil, msg.TTL})
+}
+
+func (p *Peer) HandlePublish(msg *orcache.Publish) {
+    // start a publish job
+    go func(){
+        ttl, err := Publish(msg, p.env)
+        if err != nil {
+            p.Close()
+            return
+        }
+        p.MaybeSendMsg(&orcache.Published{msg.Token, ttl})
+    }()
+}
+
+func (p *Peer) HandlePublished(msg *orcache.Published) {
+    // end the job
 }
 
 func (p *Peer) completeJob(token types.Token, resp *GetResponse) {

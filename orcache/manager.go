@@ -15,7 +15,7 @@ func NewManager(connectionString string) (m *Manager, err error) {
 }
 
 func (m *Manager) Lifecycle() {
-    env := &Env{m, &EmptyCache{}, &EmptyTokenLocker{}}
+    env := &Env{m, NewMapCache(), &EmptyTokenLocker{}}
     defer m.socket.Close()
     for {
         conn, err := m.socket.Accept()

@@ -3,7 +3,6 @@ import "orwell/orlib/protocol/orcache"
 
 
 func Find(msg *orcache.Get, env *Env) *GetResponse {
-    Info.Println("Initiating search for card", msg.ID)
 
     if data := env.Cache.Get(msg.ID); data != nil {
         return &GetResponse{data, 0}
@@ -14,7 +13,6 @@ func Find(msg *orcache.Get, env *Env) *GetResponse {
 
     ttl := msg.TTL
     for {
-        Info.Println("Retrying (ttl:", ttl, ") to find card", msg.ID)
         if ttl == 0 { break }
         ttl -= 1
 

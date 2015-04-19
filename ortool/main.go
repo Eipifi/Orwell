@@ -7,6 +7,7 @@ import (
     "orwell/ortool/gencard"
     "orwell/ortool/read"
     "orwell/ortool/fetch"
+    "orwell/ortool/publish"
 )
 
 const usage = `Ortool is a handy tool for Orwell protocol.
@@ -23,6 +24,7 @@ The commands are:
     version     prints the ortool version
     config      prints the current configuration
     fetch       resolves the Orwell address and prints its value
+    publish     publishes the card in the network
     chaininfo   displays current blockchain information
 
 Use "ortool help [command]" for more information about a command.
@@ -76,4 +78,5 @@ var modules = map[string] module {
     "gencard": module{gencard.Usage, gencard.Main},
     "read": module{read.Usage, read.Main},
     "fetch": module{fetch.Usage, fetch.Main},
+    "publish": module{publish.Usage, publish.Main},
 }

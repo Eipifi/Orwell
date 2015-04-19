@@ -15,6 +15,7 @@ type msgTypeEntry struct {
 var msgTypes = []msgTypeEntry {
     msgTypeEntry{0x01, reflect.TypeOf(Handshake{})},
     msgTypeEntry{0x02, reflect.TypeOf(Get{})},
+    msgTypeEntry{0x03, reflect.TypeOf(Publish{})},
     msgTypeEntry{0x81, reflect.TypeOf(HandshakeAck{})},
     msgTypeEntry{0x82, reflect.TypeOf(CardFound{})},
     msgTypeEntry{0x83, reflect.TypeOf(CardNotFound{})},
