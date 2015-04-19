@@ -43,7 +43,7 @@ func Main(args []string) {
 
     w.WriteFramedMessage(&protocol.Handshake{protocol.OrcacheMagic, protocol.SupportedVersion, "Ortool", nil})
     w.WriteFramedMessage(&protocol.HandshakeAck{})
-    w.WriteFramedMessage(&protocol.Get{65535, 16, id, 5})
+    w.WriteFramedMessage(&protocol.Get{protocol.RandomToken(), protocol.MaxTTLValue, id, 5})
     if err = w.Commit(conn); err != nil { return }
 
     if err = r.ReadSpecificFramedMessage(&protocol.Handshake{}); err != nil {
