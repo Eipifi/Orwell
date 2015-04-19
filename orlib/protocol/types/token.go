@@ -1,7 +1,7 @@
 package types
 import (
     "orwell/orlib/comm"
-    "math/rand"
+    "crypto/rand"
 )
 
 type Token uint64
@@ -17,7 +17,9 @@ func (t *Token) Write(w *comm.Writer) {
     w.WriteUint64(uint64(*t))
 }
 
+var randomSrc *comm.Reader = comm.NewReader(rand.Reader)
+
 func RandomToken() Token {
-    v := rand.Uint32() << 4 + rand.Uint32()
+    v, _ := randomSrc.ReadUint64()
     return Token(v)
 }
