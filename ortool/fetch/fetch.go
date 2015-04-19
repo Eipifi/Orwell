@@ -2,10 +2,11 @@ package fetch
 import (
     "net"
     "fmt"
-    "orwell/orlib/protocol"
-    "orwell/orlib/sig"
     "flag"
     "orwell/orlib/card"
+    "orwell/orlib/protocol/types"
+    "orwell/orlib/protocol/orcache"
+    "orwell/orlib/comm"
 )
 
 const Usage = `usage: ortool fetch [--from ip:port] <address>
@@ -19,9 +20,9 @@ func Main(args []string) {
         return
     }
 
-    var id *sig.ID
+    var id *types.ID
     var err error
-    if id, err = sig.HexToID(args[len(args)-1]); err != nil {
+    if id, err = types.HexToID(args[len(args)-1]); err != nil {
         fmt.Println("Error: ", err)
         return
     }
@@ -38,33 +39,25 @@ func Main(args []string) {
         return
     }
 
-    r := protocol.NewReader(conn)
-    w := protocol.NewWriter()
-
-    w.WriteFramedMessage(&protocol.Handshake{protocol.OrcacheMagic, protocol.SupportedVersion, "Ortool", nil})
-    w.WriteFramedMessage(&protocol.HandshakeAck{})
-    w.WriteFramedMessage(&protocol.Get{protocol.RandomToken(), protocol.MaxTTLValue, id, 5})
-    if err = w.Commit(conn); err != nil { return }
-
-    if err = r.ReadSpecificFramedMessage(&protocol.Handshake{}); err != nil {
-        fmt.Println("Failed to parse the handshake:", err)
+    var ms *orcache.OrcacheMessenger
+    if ms, err = orcache.NewOrcacheMessenger(conn, "Ortool", nil); err != nil {
+        fmt.Println("Error:", err)
         return
     }
 
-    if err = r.ReadSpecificFramedMessage(&protocol.HandshakeAck{}); err != nil {
-        fmt.Println("Failed to parse the handshake ack:", err)
+    if err = ms.Write(&orcache.Get{types.RandomToken(), types.MaxTTLValue, id, 0}); err != nil {
+        fmt.Println("Error:", err)
         return
     }
 
-    var msg protocol.Msg
-    msg, err = r.ReadFramedMessage()
-    if err != nil {
-        fmt.Println("Failed to read response:", err)
+    var msg comm.Msg
+    if msg, err = ms.ReadAny(); err != nil {
+        fmt.Println("Error:", err)
         return
     }
 
     switch m := msg.(type) {
-        case *protocol.CardFound:
+        case *orcache.CardFound:
             if c, e := card.Unmarshal(m.Card); e != nil {
                 s := string(c.Payload.MarshalJSON())
                 fmt.Println(s)
@@ -72,7 +65,7 @@ func Main(args []string) {
                 fmt.Println("Invalid card format or signature received.")
                 return
             }
-        case *protocol.CardNotFound:
+        case *orcache.CardNotFound:
             fmt.Printf("Failed to fetch the card. TTL=%d\n", m.TTL)
     }
 }

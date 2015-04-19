@@ -1,7 +1,7 @@
 package main
 import (
-    "orwell/orlib/protocol"
-    "io"
+    "orwell/orlib/protocol/orcache"
+    "orwell/orlib/protocol/types"
 )
 
 func Maybe(routine func()) bool {
@@ -13,28 +13,14 @@ func Maybe(routine func()) bool {
     return ret
 }
 
-func readMessages(source io.Reader) <-chan protocol.Msg{
-    c := make(chan protocol.Msg) // maybe introduce buffered chan?
-    go func(){
-        r := protocol.NewReader(source)
-        for {
-            msg, err := r.ReadFramedMessage()
-            if err != nil { break }
-            c <- msg
-        }
-        close(c)
-    }()
-    return c
-}
-
 type GetJob struct {
-    Msg *protocol.Get
+    Msg *orcache.Get
     Sink chan *GetResponse
 }
 
 type GetResponse struct {
     Bytes []byte
-    TTL protocol.TTL
+    TTL types.TTL
 }
 
 

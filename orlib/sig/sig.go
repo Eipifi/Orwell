@@ -1,9 +1,10 @@
 // Package sig handles signatures and public keys
 package sig
+import "orwell/orlib/protocol/types"
 
 type PubKey interface {
     Serializable
-    Id() *ID
+    types.IDer
     Verify(data []byte, signature []byte) bool
 }
 

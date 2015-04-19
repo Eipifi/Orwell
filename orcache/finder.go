@@ -1,7 +1,8 @@
 package main
-import "orwell/orlib/protocol"
+import "orwell/orlib/protocol/orcache"
 
-func Find(msg *protocol.Get, env *Env) *GetResponse {
+
+func Find(msg *orcache.Get, env *Env) *GetResponse {
     Info.Println("Initiating search for card", msg.ID)
 
     if data := env.Cache.Get(msg.ID); data != nil {
@@ -18,7 +19,7 @@ func Find(msg *protocol.Get, env *Env) *GetResponse {
         ttl -= 1
 
         job := &GetJob{}
-        job.Msg = &protocol.Get{msg.Token, ttl, msg.ID, msg.Version}
+        job.Msg = &orcache.Get{msg.Token, ttl, msg.ID, msg.Version}
         job.Sink = make(chan *GetResponse, 1)
 
         peer := env.Manager.PickPeer(job.Msg.ID)

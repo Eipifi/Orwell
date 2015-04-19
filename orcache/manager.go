@@ -1,7 +1,7 @@
 package main
 import (
-    "orwell/orlib/sig"
     "net"
+    "orwell/orlib/protocol/types"
 )
 
 type Manager struct {
@@ -20,11 +20,11 @@ func (m *Manager) Lifecycle() {
     for {
         conn, err := m.socket.Accept()
         if err != nil { break }
-        peer := NewPeer(conn, env)
-        go peer.Lifecycle()
+        peer := NewPeer(env)
+        go peer.Lifecycle(conn)
     }
 }
 
-func (m *Manager) PickPeer(id *sig.ID) *Peer {
+func (m *Manager) PickPeer(id *types.ID) *Peer {
     return nil
 }

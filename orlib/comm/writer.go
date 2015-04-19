@@ -1,8 +1,7 @@
-package protocol
+package comm
 import (
     "io"
     "bytes"
-    "orwell/orlib/sig"
 )
 
 
@@ -82,22 +81,4 @@ func (w *Writer) WriteVarBytes(data []byte) {
 
 func (w *Writer) WriteString(s string) {
     w.WriteVarBytes([]byte(s))
-}
-
-func (w *Writer) WriteAddress(a *Address) {
-    w.Write(a.IP[:]) // 16 bytes
-    w.WriteUint16(a.Port)
-    w.WriteUint64(a.Nonce)
-}
-
-func (w *Writer) WriteID(id *sig.ID) {
-    w.Write(id[:])
-}
-
-func (w *Writer) WriteTTL(ttl TTL) {
-    w.WriteUint8(uint8(ttl))
-}
-
-func (w *Writer) WriteToken(token Token) {
-    w.WriteUint64(uint64(token))
 }

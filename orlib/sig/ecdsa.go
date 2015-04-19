@@ -6,6 +6,7 @@ import (
     "math/big"
     "crypto/rand"
     "crypto/elliptic"
+    "orwell/orlib/protocol/types"
 )
 
 // ECDSA Public Key
@@ -23,8 +24,8 @@ func (key ecdsaPubKey) Serialize() []byte {
     return data
 }
 
-func (key ecdsaPubKey) Id() *ID {
-    return Hash(key.Serialize())
+func (key ecdsaPubKey) Id() *types.ID {
+    return types.Hash(key.Serialize())
 }
 
 func (key ecdsaPubKey) Verify(data []byte, signature []byte) bool {
@@ -33,7 +34,7 @@ func (key ecdsaPubKey) Verify(data []byte, signature []byte) bool {
     if (len(rest) != 0) || (err != nil) {
         return false
     } else {
-        return ecdsa.Verify(key.obj, HashSlice(data), sequence.R, sequence.S)
+        return ecdsa.Verify(key.obj, types.HashSlice(data), sequence.R, sequence.S)
     }
 }
 
@@ -53,7 +54,7 @@ func (key ecdsaPrvKey) PublicPart() PubKey {
 }
 
 func (key ecdsaPrvKey) Sign(data []byte) []byte {
-    r, s, _ := ecdsa.Sign(rand.Reader, key.obj, HashSlice(data))
+    r, s, _ := ecdsa.Sign(rand.Reader, key.obj, types.HashSlice(data))
     sequence := ecdsaSignature{r, s}
     result, _ := asn1.Marshal(sequence)
     return result

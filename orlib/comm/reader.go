@@ -1,13 +1,8 @@
-package protocol
+package comm
 import (
     "io"
-    "encoding/binary"
     "bytes"
-    "orwell/orlib/sig"
 )
-
-var ByteOrder = binary.BigEndian
-const MaxEnvelopeLength = 65535
 
 type Reader struct {
     r io.Reader
@@ -89,37 +84,3 @@ func (r *Reader) ReadStr() (string, error) {
     return string(b), nil
 }
 
-func (r *Reader) ReadAddress() (addr *Address, err error) {
-    addr = &Address{}
-    if err = r.ReadTo(addr.IP[:]); err != nil { return }
-    if addr.Port, err = r.ReadUint16(); err != nil { return }
-    if addr.Nonce, err = r.ReadUint64(); err != nil { return }
-    return
-}
-
-func (r *Reader) ReadID() (id *sig.ID, err error) {
-    id = &sig.ID{}
-    err = r.ReadTo(id[:])
-    return
-}
-
-func (r *Reader) ReadFrame() (frame *Frame, err error) {
-    frame = &Frame{}
-    if frame.Command, err = r.ReadVaruint(); err != nil { return }
-    if frame.Payload, err = r.ReadVarBytes(); err != nil { return }
-    return
-}
-
-func (r *Reader) ReadTTL() (ttl TTL, err error) {
-    var v uint8
-    v, err = r.ReadUint8()
-    ttl = TTL(v)
-    return
-}
-
-func (r *Reader) ReadToken() (token Token, err error) {
-    var v uint64
-    v, err = r.ReadUint64()
-    token = Token(v)
-    return
-}
