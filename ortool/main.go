@@ -1,13 +1,7 @@
 package main
-
 import (
-    "fmt"
     "os"
-    "orwell/ortool/genkey"
-    "orwell/ortool/gencard"
-    "orwell/ortool/read"
-    "orwell/ortool/fetch"
-    "orwell/ortool/publish"
+    "fmt"
 )
 
 const usage = `Ortool is a handy tool for Orwell protocol.
@@ -32,51 +26,25 @@ Use "ortool help [command]" for more information about a command.
 `
 
 func main() {
-
-    if len(os.Args) == 1 {
-        printUsage()
-    }
-
-    command := os.Args[1]
-    args := os.Args[2:]
-
-    if command == "help" {
-        if len(args) == 0 {
-            printUsage()
-        } else if len(args) > 1 {
-            fmt.Print("Too many arguments.\n\nUsage: ortool help <command>\n\n")
-        } else {
-            m, ok := modules[args[0]]
-            if ok {
-                fmt.Print(m.usage)
+    // Skip the executable name
+    args := os.Args[1:]
+    // Command specified?
+    if len(args) != 0 {
+        command := commands[args[0]]
+        if command == nil {
+            fmt.Printf("Unknown command \"%s\".\n", args[0])
+            os.Exit(2)
+        }
+        if err := command.Main(args[1:]); err != nil {
+            if err == InvalidUsage {
+                fmt.Println("Usage:", command.Usage())
+                os.Exit(2)
             } else {
-                fmt.Print("No help entry for subcommand \"", args[0], "\".\n\n")
+                fmt.Println("Error:", err)
+                os.Exit(1)
             }
         }
     } else {
-        m, ok := modules[command]
-        if ok {
-            m.main(args)
-        } else {
-            fmt.Print("Unknown subcommand \"", command, "\"\nRun \"ortool help\" for usage.\n\n")
-        }
+        fmt.Println(usage)
     }
-}
-
-func printUsage() {
-    fmt.Print(usage)
-    os.Exit(0)
-}
-
-type module struct {
-    usage string
-    main func([]string)
-}
-
-var modules = map[string] module {
-    "genkey": module{genkey.Usage, genkey.Main},
-    "gencard": module{gencard.Usage, gencard.Main},
-    "read": module{read.Usage, read.Main},
-    "fetch": module{fetch.Usage, fetch.Main},
-    "publish": module{publish.Usage, publish.Main},
 }
