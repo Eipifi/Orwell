@@ -2,9 +2,10 @@ package main
 import (
     "fmt"
     "flag"
-    "orwell/orlib/card"
     "orwell/orlib/protocol/orcache"
     "orwell/orlib/protocol/types"
+    "io"
+    "orwell/orlib/crypto/card"
 )
 
 type publishCommand struct{}
@@ -28,8 +29,11 @@ func (publishCommand) Main(args []string) (err error) {
     if fs.Parse(args) != nil { return InvalidUsage }
     if len(fs.Args()) != 1 { return InvalidUsage }
 
+    var r io.Reader
+    if r, err = FileOrSTDIN(fs.Arg(0)); err != nil { return }
+
     var c *card.Card
-    if c, err = card.FromFile(fs.Arg(0)); err != nil { return }
+    if c, err = card.UnmarshalReader(r); err != nil { return }
 
     var ms *orcache.OrcacheMessenger
     if ms, err = orcache.SimpleClient(*fTg); err != nil { return }

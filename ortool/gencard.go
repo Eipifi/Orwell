@@ -2,10 +2,10 @@ package main
 import (
     "os"
     "io/ioutil"
-    "orwell/orlib/card"
     "orwell/orlib/sig"
     "encoding/pem"
     "errors"
+    "orwell/orlib/crypto/card"
 )
 
 type gencardCommand struct{}
@@ -55,10 +55,11 @@ func (gencardCommand) Main(args []string) (err error) {
     if key, err = sig.ParsePrvKey(b.Bytes); err != nil { return }
 
     var c *card.Card
-    if c, err = card.Create(rawJson, key); err != nil { return }
+    if c, err = card.UnmarshalOnlyJSON(rawJson); err != nil { return }
+    if err = c.Sign(key); err != nil { return }
 
     var cb []byte
-    if cb, err = c.Marshal(); err != nil { return }
+    if cb, err = c.MarshalBinary(); err != nil { return }
 
     block := pem.Block{}
     block.Type = "ORWELL CARD"

@@ -4,9 +4,9 @@ import (
     "io/ioutil"
     "encoding/pem"
     "orwell/orlib/sig"
-    "orwell/orlib/card"
     "io"
     "errors"
+    "orwell/orlib/crypto/card"
 )
 
 type readCommand struct {}
@@ -43,12 +43,15 @@ func (readCommand) Main(args []string) (err error) {
         return
     }
 
-    c, err := card.Unmarshal(b.Bytes)
+    c := &card.Card{}
+    err = c.UnmarshalBinary(b.Bytes)
     if err == nil {
+        json, _ := c.Payload.MarshalJSON()
         fmt.Println("CARD")
-        fmt.Printf("ID: %s\n", c.Key.Id())
-        fmt.Printf("%s\n", c.Payload.MarshalJSON())
+        fmt.Printf("ID: %s\n", c.PubKey().Id())
+        fmt.Printf("%s\n", json)
         return
     }
+    fmt.Println(err)
     return errors.New("Failed to parse input.")
 }

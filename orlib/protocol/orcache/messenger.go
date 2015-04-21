@@ -4,7 +4,7 @@ import (
     "orwell/orlib/comm"
     "orwell/orlib/protocol/types"
     "errors"
-    "orwell/orlib/card"
+    "orwell/orlib/crypto/card"
 )
 
 type OrcacheMessenger struct {
@@ -53,12 +53,13 @@ func writeFramedMessage(w *comm.Writer, m comm.Msg) {
 func (ms *OrcacheMessenger) Get(id *types.ID, version uint64) (c *card.Card, err error) {
     t := types.RandomToken()
     if err = ms.Write(&Get{t, types.MaxTTLValue, id, version}); err != nil { return }
-    var m comm.Msg
-    if m, err = ms.ReadAny(); err != nil { return }
-    switch m := m.(type) {
+    var msg comm.Msg
+    if msg, err = ms.ReadAny(); err != nil { return }
+    switch m := msg.(type) {
         case *CardFound:
             if m.Token == t {
-                return card.Unmarshal(m.Card)
+                c := &card.Card{}
+                return c, c.UnmarshalBinary(m.Card)
             } else {
                 return nil, errors.New("Token mismatch")
             }
@@ -76,7 +77,7 @@ func (ms *OrcacheMessenger) Get(id *types.ID, version uint64) (c *card.Card, err
 func (ms *OrcacheMessenger) Put(c *card.Card) (ttl types.TTL, err error) {
     t := types.RandomToken()
     var raw []byte
-    if raw, err = c.Marshal(); err != nil { return }
+    if raw, err = c.MarshalBinary(); err != nil { return }
     if err = ms.Write(&Publish{t, types.MaxTTLValue, raw}); err != nil { return }
     p := &Published{}
     if err = ms.Read(p); err != nil { return }

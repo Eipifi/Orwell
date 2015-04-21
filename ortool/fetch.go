@@ -1,13 +1,11 @@
 package main
 import (
-    "fmt"
     "flag"
-    "orwell/orlib/card"
     "orwell/orlib/protocol/types"
     "orwell/orlib/protocol/orcache"
-    "encoding/pem"
     "os"
     "errors"
+    "orwell/orlib/crypto/card"
 )
 
 type fetchCommand struct {}
@@ -55,15 +53,15 @@ func (fetchCommand) Main(args []string) (err error) {
     if c == nil {
         return errors.New("Card not found on the server.")
     } else {
+        var b []byte
         switch *fFmt {
             case "json":
-                fmt.Println(string(c.Payload.MarshalJSON()))
+                b, err = c.Payload.MarshalJSON()
             case "pem":
-                block := pem.Block{}
-                block.Type = "ORWELL CARD"
-                block.Bytes, _ = c.Marshal()
-                return pem.Encode(os.Stdout, &block)
+                b, err = c.MarshalPEM()
         }
+        if err != nil { return }
+        _, err = os.Stdout.Write(b)
     }
     return
 }
