@@ -1,12 +1,13 @@
 package main
 import (
-    "fmt"
-    "io/ioutil"
-    "encoding/pem"
-    "orwell/orlib/sig"
+    "orwell/orlib/crypto/armor"
+    "orwell/orlib/crypto/sig"
     "io"
-    "errors"
+    "fmt"
     "orwell/orlib/crypto/card"
+    "errors"
+    "os"
+    "orwell/orlib/butils"
 )
 
 type readCommand struct {}
@@ -23,35 +24,30 @@ Arguments:
 `
 }
 
-
 func (readCommand) Main(args []string) (err error) {
     if len(args) > 1 { return InvalidUsage }
 
     var f io.Reader
     if f, err = FileOrSTDIN(rs(args, 0)); err != nil { return }
 
-    var data []byte
-    if data, err = ioutil.ReadAll(f); err != nil { return }
+    data, err := armor.DecodeAll(f)
+    if err != nil { return }
 
-    b, _ := pem.Decode(data)
-    if b == nil { return errors.New("Failed to read PEM file.") }
-
-    key, err := sig.ParsePrvKey(b.Bytes)
-    if err == nil {
+    k := sig.PrivateKey{}
+    if err = k.ReadBytes(data); err == nil {
         fmt.Println("PRIVATE KEY")
-        fmt.Printf("ID: %s\n", key.PublicPart().Id())
+        fmt.Println("ID:", k.PublicPart().Id())
         return
     }
 
-    c := &card.Card{}
-    err = c.UnmarshalBinary(b.Bytes)
-    if err == nil {
-        json, _ := c.Payload.MarshalJSON()
+    c := card.Card{}
+    if err = c.ReadBytes(data); err == nil {
         fmt.Println("CARD")
-        fmt.Printf("ID: %s\n", c.PubKey().Id())
-        fmt.Printf("%s\n", json)
-        return
+        fmt.Println("ID:", c.Key.Id())
+        json, err := c.Payload.WriteJSON()
+        if err != nil { return }
+        return butils.WriteFull(os.Stdout, json)
     }
-    fmt.Println(err)
-    return errors.New("Failed to parse input.")
+
+    return errors.New("PEM content not recognized")
 }

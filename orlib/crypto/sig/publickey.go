@@ -43,3 +43,9 @@ func (k *PublicKey) Verify(payload []byte, signature *Signature) error {
         return errors.New("Signature verification failed")
     }
 }
+
+func (k *PublicKey) Id() *hash.ID {
+    buf, err := k.WriteBytes()
+    if err != nil { return nil }
+    return hash.NewId(buf)
+}

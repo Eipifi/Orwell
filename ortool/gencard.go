@@ -1,25 +1,24 @@
 package main
 import (
     "os"
+    "orwell/orlib/crypto/sig"
     "io/ioutil"
-    "orwell/orlib/sig"
-    "encoding/pem"
-    "errors"
     "orwell/orlib/crypto/card"
+    "orwell/orlib/crypto/armor"
 )
 
 type gencardCommand struct{}
 
 func (gencardCommand) Usage() string {
-    return "ortool gencard <key> [payload]"
+    return "ortool gencard <key> <payload>"
 }
 
 func (gencardCommand) Description() string {
     return `Gencard creates a new card from a JSON card payload and private key.
 
 Arguments:
-    key      PEM key file
-    payload  Path to JSON card file. If empty, STDIN will be used.
+    key      Path to PEM key file
+    payload  Path to JSON card file
 
 Example payload structure:
 
@@ -38,31 +37,21 @@ Example payload structure:
 }
 
 func (gencardCommand) Main(args []string) (err error) {
-    if len(args) > 2 || len(args) < 1 { return InvalidUsage }
+    if len(args) != 2 { return InvalidUsage }
 
-    var rawKey []byte
-    if rawKey, err = ioutil.ReadFile(args[0]); err != nil { return }
+    keyPEM, err := ioutil.ReadFile(args[0])
+    if err != nil { return }
+    pldJSON, err := os.Open(args[1])
+    if err != nil { return }
 
-    var rawJson []byte
-    if rawJson, err = ReadWholeFileOrSTDIN(rs(args, 1)); err != nil { return }
+    key := &sig.PrivateKey{}
+    if err = key.ReadBytes(keyPEM); err != nil { return }
 
-    b, _ := pem.Decode(rawKey)
-    if b == nil {
-        return errors.New("Key: failed to strip the PEM armor\n")
-    }
+    pld := &card.Payload{}
+    if err = pld.ReadJSON(pldJSON); err != nil { return }
 
-    var key sig.PrvKey
-    if key, err = sig.ParsePrvKey(b.Bytes); err != nil { return }
+    card, err := pld.Sign(key)
+    if err != nil { return }
 
-    var c *card.Card
-    if c, err = card.UnmarshalOnlyJSON(rawJson); err != nil { return }
-    if err = c.Sign(key); err != nil { return }
-
-    var cb []byte
-    if cb, err = c.MarshalBinary(); err != nil { return }
-
-    block := pem.Block{}
-    block.Type = "ORWELL CARD"
-    block.Bytes = cb
-    return pem.Encode(os.Stdout, &block)
+    return armor.EncodeObjTo(card, armor.TextCard, os.Stdout)
 }
