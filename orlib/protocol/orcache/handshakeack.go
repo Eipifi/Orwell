@@ -1,8 +1,8 @@
 package orcache
-import "orwell/orlib/comm"
+import "io"
 
 type HandshakeAck struct { }
 
-func (m *HandshakeAck) Read(r *comm.Reader) error { return nil }
+func (m *HandshakeAck) Read(r io.Reader) error { return nil }
 
-func (m *HandshakeAck) Write(w *comm.Writer) { }
+func (m *HandshakeAck) Write(w io.Writer) error { return nil }

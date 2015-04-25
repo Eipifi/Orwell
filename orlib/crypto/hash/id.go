@@ -1,7 +1,7 @@
 package hash
 import (
     "io"
-    "orwell/orlib2/butils"
+    "orwell/orlib/butils"
     "crypto/sha256"
     "encoding/hex"
 )

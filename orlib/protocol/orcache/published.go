@@ -1,21 +1,21 @@
 package orcache
 import (
-    "orwell/orlib/protocol/types"
-    "orwell/orlib/comm"
+    "orwell/orlib/protocol/common"
+    "io"
 )
 
 type Published struct {
-    Token types.Token
-    TTL types.TTL
+    Token common.Token
+    TTL common.TTL
 }
 
-func (p *Published) Read(r *comm.Reader) (err error) {
+func (p *Published) Read(r io.Reader) (err error) {
     if err = p.Token.Read(r); err != nil { return }
     if err = p.TTL.Read(r); err != nil { return }
     return
 }
 
-func (p *Published) Write(w *comm.Writer) {
-    p.Token.Write(w)
-    p.TTL.Write(w)
+func (p *Published) Write(w io.Writer) (err error) {
+    if err = p.Token.Write(w); err != nil { return }
+    return p.TTL.Write(w)
 }

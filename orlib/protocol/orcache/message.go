@@ -1,8 +1,8 @@
 package orcache
 import (
-    "orwell/orlib2"
+    "orwell/orlib"
     "io"
-    "orwell/orlib2/butils"
+    "orwell/orlib/butils"
     "errors"
 )
 
@@ -38,9 +38,23 @@ func NewMessage(chunk butils.Chunk) *Message {
 }
 
 func commandToChunk(command uint64) butils.Chunk {
+    if command == 0x01 { return &Handshake{} }
+    if command == 0x02 { return &Get{} }
+    if command == 0x03 { return &Publish{} }
+    if command == 0x81 { return &HandshakeAck{} }
+    if command == 0x82 { return &CardFound{} }
+    if command == 0x83 { return &CardNotFound{} }
     return nil
 }
 
 func chunkToCommand(chunk butils.Chunk) uint64 {
+    switch chunk := chunk.(type) {
+        case *Handshake:    return 0x01
+        case *Get:          return 0x02
+        case *Publish:      return 0x03
+        case *HandshakeAck: return 0x81
+        case *CardFound:    return 0x82
+        case *CardNotFound: return 0x83
+    }
     return 0
 }

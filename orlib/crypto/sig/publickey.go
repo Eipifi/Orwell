@@ -4,7 +4,7 @@ import (
     "io"
     "crypto/x509"
     "errors"
-    "orwell/orlib/protocol/types"
+    "orwell/orlib/crypto/hash"
 )
 
 // TODO: make PublicKey implement Readable
@@ -36,7 +36,7 @@ func (k *PublicKey) WriteBytes() (data []byte, err error) {
 }
 
 func (k *PublicKey) Verify(payload []byte, signature *Signature) error {
-    h := types.HashSlice(payload)
+    h := hash.Hash(payload)
     if ecdsa.Verify(k.obj, h, signature.R, signature.S) {
         return nil
     } else {

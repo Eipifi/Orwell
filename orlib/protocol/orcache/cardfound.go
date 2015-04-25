@@ -1,21 +1,27 @@
 package orcache
 import (
-    "orwell/orlib/protocol/types"
-    "orwell/orlib/comm"
+    "io"
+    "orwell/orlib/protocol/common"
+    "orwell/orlib/crypto/card"
+    "orwell/orlib/butils"
 )
 
 type CardFound struct {
-    Token types.Token
-    Card []byte
+    Token common.Token
+    Card *card.Card
 }
 
-func (m *CardFound) Read(r *comm.Reader) (err error) {
+func (m *CardFound) Read(r io.Reader) (err error) {
     if err = m.Token.Read(r); err != nil { return }
-    if m.Card, err = r.ReadVarBytes(); err != nil { return }
-    return
+    var card []byte
+    if card, err = butils.ReadVarBytes(r); err != nil { return }
+    m.Card = &card.Card{}
+    return m.Card.ReadBytes(card)
 }
 
-func (m *CardFound) Write(w *comm.Writer) {
+func (m *CardFound) Write(w io.Writer) error {
     m.Token.Write(w)
-    w.WriteVarBytes(m.Card)
+    card, err := m.Card.WriteBytes()
+    if err != nil { return err }
+    return butils.WriteVarBytes(w, card)
 }

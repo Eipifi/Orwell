@@ -1,20 +1,20 @@
 package armor
 import (
-    "encoding"
     "encoding/pem"
     "errors"
+    "orwell/orlib/butils"
 )
 
-func Marshal(name string, d encoding.BinaryMarshaler) (b []byte, err error) {
+func Encode(w butils.ByteWritable, name string) ([]byte, err error) {
     block := &pem.Block{}
-    if block.Bytes, err = d.MarshalBinary(); err != nil { return }
+    if block.Bytes, err = w.WriteBytes(); err != nil { return }
     block.Type = name
     return pem.EncodeToMemory(block), nil
 }
 
-func Unmarshal(b []byte, d encoding.BinaryUnmarshaler) (err error) {
-    block, r := pem.Decode(b)
-    if block == nil { return errors.New("Failed to parse PEM format") }
-    if len(r) > 0 { return errors.New("Unparsed bytes remaining") }
-    return d.UnmarshalBinary(block.Bytes)
+func Decode(r butils.ByteReadable, data []byte) error {
+    block, rest := pem.Decode(data)
+    if block == nil { return errors.New("PEM decode failed") }
+    if len(rest) > 0 { return errors.New("Bytes remaining") }
+    return r.ReadBytes(block.Bytes)
 }

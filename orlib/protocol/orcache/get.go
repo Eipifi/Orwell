@@ -1,28 +1,29 @@
 package orcache
 import (
-    "orwell/orlib/protocol/types"
-    "orwell/orlib/comm"
+    "orwell/orlib/crypto/hash"
+    "orwell/orlib/protocol/common"
+    "io"
+    "orwell/orlib/butils"
 )
 
 type Get struct {
-    Token types.Token
-    TTL types.TTL
-    ID *types.ID
+    Token common.Token
+    TTL common.TTL
+    ID *hash.ID
     Version uint64
 }
 
-func (m *Get) Read(r *comm.Reader) (err error) {
-    m.ID = &types.ID{}
-    if err = m.Token.Read(r); err != nil { return }
-    if err = m.TTL.Read(r); err != nil { return }
-    if err = m.ID.Read(r); err != nil { return }
-    if m.Version, err = r.ReadVaruint(); err != nil { return }
-    return
+func (g *Get) Read(r io.Reader) (err error) {
+    if err = g.Token.Read(r); err != nil { return }
+    if err = g.TTL.Read(r); err != nil { return }
+    g.ID = &hash.ID{}
+    if err = g.ID.Read(r); err != nil { return }
+    return butils.ReadVarBytes(r);
 }
 
-func (m *Get) Write(w *comm.Writer) {
-    m.Token.Write(w)
-    m.TTL.Write(w)
-    m.ID.Write(w)
-    w.WriteVaruint(m.Version)
+func (g *Get) Write(w io.Writer) (err error) {
+    if err = g.Token.Write(w); err != nil { return }
+    if err = g.TTL.Write(w); err != nil { return }
+    if err = g.ID.Write(w); err != nil { return }
+    return butils.WriteVarUint(w, g.Version)
 }

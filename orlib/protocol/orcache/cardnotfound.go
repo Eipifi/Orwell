@@ -1,21 +1,21 @@
 package orcache
 import (
-    "orwell/orlib/comm"
-    "orwell/orlib/protocol/types"
+    "orwell/orlib/protocol/common"
+    "io"
 )
 
 type CardNotFound struct {
-    Token types.Token
-    TTL types.TTL
+    Token common.Token
+    TTL common.TTL
 }
 
-func (m *CardNotFound) Read(r *comm.Reader) (err error) {
+func (m *CardNotFound) Read(r io.Reader) (err error) {
     if err = m.Token.Read(r); err != nil { return }
     if err = m.TTL.Read(r); err != nil { return }
     return
 }
 
-func (m *CardNotFound) Write(w *comm.Writer) {
-    m.Token.Write(w)
-    m.TTL.Write(w)
+func (m *CardNotFound) Write(w io.Writer) (err error) {
+    if err = m.Token.Write(w); err != nil { return }
+    return m.TTL.Write(w)
 }

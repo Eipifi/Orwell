@@ -1,38 +1,40 @@
 package orcache
 import (
-    "orwell/orlib/comm"
-    "orwell/orlib/protocol/types"
+    "io"
+    "orwell/orlib/butils"
+    "orwell/orlib/protocol/common"
 )
+
 
 type Handshake struct {
     Magic uint32
     Version uint64
     UserAgent string
-    Address *types.Address
+    Address *common.Address
 }
 
-func (m *Handshake) Read(r *comm.Reader) (err error) {
-    if m.Magic, err = r.ReadUint32(); err != nil { return }
-    if m.Version, err = r.ReadVaruint(); err != nil { return }
-    if m.UserAgent, err = r.ReadStr(); err != nil { return }
+func (m *Handshake) Read(r io.Reader) (err error) {
+    if m.Magic, err = butils.ReadUint32(r); err != nil { return }
+    if m.Version, err = butils.ReadVarUint(r); err != nil { return }
+    if m.UserAgent, err = butils.ReadString(r); err != nil { return }
 
     var f uint8
-    if f, err = r.ReadUint8(); err != nil { return }
+    if f, err = butils.ReadUint8(r); err != nil { return }
     if f & 0x01 > 0 {
-        m.Address = &types.Address{}
+        m.Address = &common.Address{}
         if m.Address.Read(r) != nil { return }
     }
     return
 }
 
-func (m *Handshake) Write(w *comm.Writer) {
-    w.WriteUint32(m.Magic)
-    w.WriteVaruint(m.Version)
-    w.WriteString(m.UserAgent)
+func (m *Handshake) Write(w io.Writer) (err error) {
+    if err = butils.WriteUint32(w, m.Magic); err != nil { return }
+    if err = butils.WriteVarUint(w, m.Version); err != nil { return }
+    if err = butils.WriteString(w, m.UserAgent); err != nil { return }
     if m.Address == nil {
-        w.WriteUint8(0)
+        return butils.WriteByte(w, 0)
     } else {
-        w.WriteUint8(1)
-        m.Address.Write(w)
+        if err = butils.WriteByte(w, 1); err != nil { return }
+        return m.Address.Write(w)
     }
 }

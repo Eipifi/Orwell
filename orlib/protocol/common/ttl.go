@@ -1,7 +1,7 @@
 package common
 import (
     "io"
-    "orwell/orlib2/butils"
+    "orwell/orlib/butils"
 )
 
 const MaxTTLValue = TTL(255)

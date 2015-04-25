@@ -3,7 +3,7 @@ import (
     "io"
     "github.com/eipifi/asn1"
     "encoding/json"
-    "orwell/orlib2/crypto/sig"
+    "orwell/orlib/crypto/sig"
 )
 
 type Payload struct {

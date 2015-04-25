@@ -4,9 +4,9 @@ import (
     "io"
     "crypto/x509"
     "crypto/rand"
-    "orwell/orlib/protocol/types"
     "crypto/elliptic"
-    "orwell/orlib2/butils"
+    "orwell/orlib/butils"
+    "orwell/orlib/crypto/hash"
 )
 
 // TODO: make PrivateKey implement Readable
@@ -34,7 +34,7 @@ func (k *PrivateKey) PublicPart() *PublicKey {
 }
 
 func (k *PrivateKey) Sign(payload []byte) (*Signature, error) {
-    h := types.HashSlice(payload)
+    h := hash.Hash(payload)
     r, s, err := ecdsa.Sign(rand.Reader, k.obj, h)
     if err != nil { return nil, err }
     return &Signature{r, s}, nil

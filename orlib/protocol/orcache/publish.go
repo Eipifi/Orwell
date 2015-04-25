@@ -1,24 +1,30 @@
 package orcache
 import (
-    "orwell/orlib/protocol/types"
-    "orwell/orlib/comm"
+    "orwell/orlib/protocol/common"
+    "io"
+    "orwell/orlib/crypto/card"
+    "orwell/orlib/butils"
 )
 
 type Publish struct {
-    Token types.Token
-    TTL types.TTL
-    Card []byte
+    Token common.Token
+    TTL common.TTL
+    Card *card.Card
 }
 
-func (p *Publish) Read(r *comm.Reader) (err error) {
+func (p *Publish) Read(r io.Reader) (err error) {
     if err = p.Token.Read(r); err != nil { return }
     if err = p.TTL.Read(r); err != nil { return }
-    if p.Card, err = r.ReadVarBytes(); err != nil { return }
-    return
+    var card []byte
+    if card, err = butils.ReadVarBytes(r); err != nil { return }
+    p.Card = &card.Card{}
+    return p.Card.ReadBytes(card)
 }
 
-func (p *Publish) Write(w *comm.Writer) {
-    p.Token.Write(w)
-    p.TTL.Write(w)
-    w.WriteVarBytes(p.Card)
+func (p *Publish) Write(w io.Writer) (err error) {
+    if err = p.Token.Write(w); err != nil { return }
+    if err = p.TTL.Write(w); err != nil { return }
+    var card []byte
+    if card, err = p.Card.WriteBytes(); err != nil { return }
+    return butils.WriteVarBytes(w, card)
 }
