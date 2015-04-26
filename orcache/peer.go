@@ -2,170 +2,47 @@ package main
 import (
     "net"
     "orwell/orlib/protocol/orcache"
-    "orwell/orlib/comm"
-    "orwell/orlib/protocol/types"
-    "fmt"
+    "orwell/orlib/conv"
+    "log"
+    "os"
 )
 
-const UserAgent = "Orcache"
-
 type Peer struct {
-    ms *orcache.OrcacheMessenger
-    Upstream chan comm.Msg
-    NewJobs chan *GetJob
-    jobs map[types.Token] *GetJob
-    downstream chan comm.Msg
-    env *Env
-    alive bool
+    cn net.Conn
+    hs *orcache.Handshake
+    log *log.Logger
 }
 
-func NewPeer(env *Env) (*Peer) {
-    p := &Peer{}
-    p.Upstream = make(chan comm.Msg)
-    p.NewJobs = make(chan *GetJob)
-    p.downstream = make(chan comm.Msg)
-    p.alive = true
-    p.env = env
-    return p
-}
-
-func (p *Peer) Lifecycle(conn net.Conn) {
-    var err error
-    p.ms, err = orcache.NewOrcacheMessenger(conn, UserAgent, nil)
-    if err != nil {
-
-    }
-    defer p.Close()
-
+func HandleConnection(conn net.Conn) {
     go func(){
-        for {
-            m, e := p.ms.ReadAny()
-            if e != nil { break }
-            p.downstream <- m
-        }
-        close(p.downstream)
-    }()
-
-    for {
-        if !p.alive { break }
-        select {
-            case job := <- p.NewJobs:
-                p.handleJob(job)
-            case msg := <- p.Upstream:
-                p.sendMsg(msg)
-            case msg := <- p.downstream:
-                if msg == nil { return }
-                p.handleMsg(msg)
-        }
-    }
-}
-
-func (p *Peer) Close() {
-    if !p.alive { return }
-    p.alive = false
-    close(p.Upstream)
-    close(p.NewJobs)
-    p.ms.Close()
-}
-
-func (p *Peer) handleJob(job *GetJob) {
-    // So we received a job. Let's look at it.
-    if _, ok := p.jobs[job.Msg.Token]; ok {
-        // Hmm. It looks like we are already dealing with a job of this ID.
-        // We cannot interfere with it. Therefore we quit the job immediately.
-        job.Fail()
-    } else {
-        // Ok, this token is unknown. We can proceed.
-        p.jobs[job.Msg.Token] = job
-        p.sendMsg(job.Msg)
-    }
-}
-
-func (p *Peer) sendMsg(msg comm.Msg) {
-    // todo: assess the connection state
-    p.ms.Write(msg)
-}
-
-func (p *Peer) handleMsg(msg comm.Msg) {
-    fmt.Println("received", msg)
-    // Switch over message type
-    switch msg := msg.(type) {
-        case *orcache.Get:
-            p.HandleGet(msg)
-
-        case *orcache.CardFound:
-            p.HandleCardFound(msg)
-
-        case *orcache.CardNotFound:
-            p.HandleCardNotFound(msg)
-
-        case *orcache.Publish:
-            p.HandlePublish(msg)
-
-        case *orcache.Published:
-            p.HandlePublished(msg)
-
-        default:
-        panic("Unrecognized message type")
-    }
-}
-
-func (p *Peer) MaybeSendMsg(msg comm.Msg) bool {
-    return Maybe(func(){
-        p.Upstream <- msg
-    })
-}
-
-func (p *Peer) MaybeSendJob(job *GetJob) bool {
-    return Maybe(func(){
-        p.NewJobs <- job
-    })
-}
-
-func (p *Peer) HandleGet(msg *orcache.Get) {
-    go func(){
-        result := Find(msg, p.env)
-        if result.Bytes == nil {
-            p.MaybeSendMsg(&orcache.CardNotFound{msg.Token, result.TTL})
-        } else {
-            p.MaybeSendMsg(&orcache.CardFound{msg.Token, result.Bytes})
-        }
-    }()
-}
-
-func (p *Peer) HandleCardFound(msg *orcache.CardFound) {
-    p.completeJob(msg.Token, &GetResponse{msg.Card, 0})
-}
-
-func (p *Peer) HandleCardNotFound(msg *orcache.CardNotFound) {
-    p.completeJob(msg.Token, &GetResponse{nil, msg.TTL})
-}
-
-func (p *Peer) HandlePublish(msg *orcache.Publish) {
-    // start a publish job
-    go func(){
-        ttl, err := Publish(msg, p.env)
+        prefix := conn.RemoteAddr().String() + " "
+        peer := &Peer{cn: conn, log: log.New(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)}
+        err := peer.lifecycle()
         if err != nil {
-            p.Close()
-            return
+            peer.log.Println(err)
         }
-        p.MaybeSendMsg(&orcache.Published{msg.Token, ttl})
     }()
 }
 
-func (p *Peer) HandlePublished(msg *orcache.Published) {
-    // end the job
+func (p *Peer) lifecycle() (err error) {
+    defer p.close()
+    p.log.Println("Connected")
+    if p.hs, err = conv.ShakeHands(p.cn, "orcache", nil); err != nil { return }
+    p.log.Println("HS:", p.hs)
+
+    inbox := conv.MessageListener(p.cn)
+    for {
+        select {
+            case msg := <- inbox:
+                if msg == nil { return }
+                p.log.Println("Received", msg)
+                p.handleMessage(msg)
+        }
+    }
+    return
 }
 
-func (p *Peer) completeJob(token types.Token, resp *GetResponse) {
-    // Fetch the specified job
-    job, ok := p.jobs[token]
-    // Do we have it?
-    if !ok {
-        p.Close()
-        return
-    }
-    // Send the response and clean up
-    job.Sink <- resp
-    delete(p.jobs, token)
+func (p *Peer) close() error {
+    p.log.Println("Disconnected")
+    return p.cn.Close()
 }

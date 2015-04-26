@@ -30,7 +30,7 @@ func CreateTCPConversation(addr string) (*Conversation, error) {
 }
 
 func (c *Conversation) Write(chunk butils.Chunk) error {
-    msg := orcache.NewMessage(chunk)
+    msg := orcache.Msg(chunk)
     if msg == nil { return errors.New("Unknown chunk type") }
     return msg.Write(c.Conn)
 }
@@ -42,18 +42,12 @@ func (c *Conversation) ReadAny() (chunk butils.Chunk, err error) {
 }
 
 func (c *Conversation) ReadSpecific(chunk butils.Chunk) (err error) {
-    msg := &orcache.Message{}
-    return msg.ReadSpecific(c.Conn, chunk)
+    return orcache.Msg(chunk).Read(c.Conn)
 }
 
 func (c *Conversation) DoHandshake(userAgent string, addr *common.Address) (err error) {
-    // Send handshake
-    if err = c.Write(&orcache.Handshake{OrcacheMagic, SupportedVersion, userAgent, addr}); err != nil { return }
-    c.Hs = &orcache.Handshake{}
-    if err = c.ReadSpecific(c.Hs); err != nil { return }
-    // accept all
-    if err = c.Write(&orcache.HandshakeAck{}); err != nil { return }
-    return c.ReadSpecific(&orcache.HandshakeAck{})
+    c.Hs, err = ShakeHands(c.Conn, userAgent, addr)
+    return err
 }
 
 func (c *Conversation) DoGet(id *hash.ID, ver uint64) (cd *card.Card, err error) {

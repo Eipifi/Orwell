@@ -34,9 +34,7 @@ Formats:
 }
 
 func (fetchCommand) Main(args []string) (err error) {
-    if len(args) == 0 { return InvalidUsage }
 
-    args = args[:len(args)-1]
     fs := flag.NewFlagSet("fetch", flag.ContinueOnError)
     fSrc := fs.String("from", "127.0.0.1:1984", "")
     fFmt := fs.String("format", "json", "")

@@ -13,9 +13,17 @@ type Message struct {
 // TODO: maybe remove the length field (it is redundant, after all)
 
 func (m *Message) Read(r io.Reader) (err error) {
-    if m.Command, err = butils.ReadVarUint(r); err != nil { return }
-    m.Chunk = commandToChunk(m.Command)
-    if m.Chunk == nil { return errors.New("Unrecognized message code") }
+    var cmd uint64
+    if cmd, err = butils.ReadVarUint(r); err != nil { return }
+
+    if m.Chunk == nil { // if we do not expect any specific message type
+        m.Command = cmd
+        m.Chunk = commandToChunk(m.Command)
+        if m.Chunk == nil { return errors.New("Unrecognized message code") }
+    } else { // if we expect a specific type, specified by m.Chunk
+        if m.Command != cmd { return errors.New("Unexpected message code") }
+    }
+
     var payload []byte
     if payload, err = butils.ReadVarBytes(r); err != nil { return }
     return butils.ReadAllInto(m.Chunk, payload)
@@ -28,14 +36,7 @@ func (m *Message) Write(w io.Writer) (err error) {
     return butils.WriteVarBytes(w, payload)
 }
 
-func (m *Message) ReadSpecific(r io.Reader, chunk butils.Chunk) (err error) {
-    if m.Command, err = butils.ReadVarUint(r); err != nil { return }
-    if m.Command != chunkToCommand(chunk) { return errors.New("Unexpected message code") }
-    m.Chunk = chunk
-    return chunk.Read(r)
-}
-
-func NewMessage(chunk butils.Chunk) *Message {
+func Msg(chunk butils.Chunk) *Message {
     m := &Message{}
     m.Chunk = chunk
     m.Command = chunkToCommand(chunk)
