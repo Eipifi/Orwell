@@ -18,7 +18,8 @@ func (g *Get) Read(r io.Reader) (err error) {
     if err = g.TTL.Read(r); err != nil { return }
     g.ID = &hash.ID{}
     if err = g.ID.Read(r); err != nil { return }
-    return butils.ReadVarBytes(r);
+    g.Version, err = butils.ReadVarUint(r)
+    return
 }
 
 func (g *Get) Write(w io.Writer) (err error) {

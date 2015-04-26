@@ -21,13 +21,13 @@ func Encode(data []byte, name string) []byte {
 
 func Decode(data []byte) ([]byte, error) {
     block, rest := pem.Decode(data)
-    if block == nil { return errors.New("PEM decode failed") }
-    if len(rest) > 0 { return errors.New("Bytes remaining") }
+    if block == nil { return nil, errors.New("PEM decode failed") }
+    if len(rest) > 0 { return nil, errors.New("Bytes remaining") }
     return block.Bytes, nil
 }
 
-func EncodeObjTo(r butils.ByteWritable, name string, target io.Writer) error {
-    buf, err := butils.WriteToBytes(r)
+func EncodeObjTo(w butils.ByteWritable, name string, target io.Writer) error {
+    buf, err := w.WriteBytes()
     if err != nil { return err }
     return EncodeBytesTo(buf, name, target)
 }
@@ -35,6 +35,12 @@ func EncodeObjTo(r butils.ByteWritable, name string, target io.Writer) error {
 func EncodeBytesTo(data []byte, name string, target io.Writer) error {
     buf := Encode(data, name)
     return butils.WriteFull(target, buf)
+}
+
+func DecodeFromTo(src io.Reader, r butils.ByteReadable) error {
+    data, err := ioutil.ReadAll(src)
+    if err != nil { return err }
+    return DecodeTo(data, r)
 }
 
 func DecodeTo(data []byte, r butils.ByteReadable) error {
@@ -45,6 +51,6 @@ func DecodeTo(data []byte, r butils.ByteReadable) error {
 
 func DecodeAll(r io.Reader) ([]byte, error) {
     data, err := ioutil.ReadAll(r)
-    if err != nil { return }
+    if err != nil { return nil, err }
     return Decode(data)
 }

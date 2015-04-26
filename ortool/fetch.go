@@ -1,11 +1,13 @@
 package main
 import (
     "flag"
-    "orwell/orlib/protocol/types"
-    "orwell/orlib/protocol/orcache"
-    "os"
-    "errors"
+    "orwell/orlib/crypto/hash"
+    "orwell/orlib/conv"
     "orwell/orlib/crypto/card"
+    "errors"
+    "orwell/orlib/crypto/armor"
+    "os"
+    "orwell/orlib/butils"
 )
 
 type fetchCommand struct {}
@@ -41,27 +43,28 @@ func (fetchCommand) Main(args []string) (err error) {
     if err = fs.Parse(args); err != nil { return InvalidUsage }
     if len(fs.Args()) != 1 { return InvalidUsage }
 
-    var id *types.ID
-    if id, err = types.HexToID(fs.Arg(0)); err != nil { return }
+    var id *hash.ID
+    if id, err = hash.HexToID(fs.Arg(0)); err != nil { return }
 
-    var ms *orcache.OrcacheMessenger
-    if ms, err = orcache.SimpleClient(*fSrc); err != nil { return }
+    var cv *conv.Conversation
+    if cv, err = conv.CreateTCPConversation(*fSrc); err != nil { return }
+
+    if err = cv.DoHandshake("ortool", nil); err != nil { return }
 
     var c *card.Card
-    if c, err = ms.Get(id, 0); err != nil { return }
+    if c, err = cv.DoGet(id, 0); err != nil { return }
 
     if c == nil {
         return errors.New("Card not found on the server.")
     } else {
-        var b []byte
         switch *fFmt {
             case "json":
-                b, err = c.Payload.MarshalJSON()
+                var b []byte
+                if b, err = c.Payload.WriteJSON(); err != nil { return }
+                return butils.WriteFull(os.Stdout, b)
             case "pem":
-                b, err = c.MarshalPEM()
+                return armor.EncodeObjTo(c, armor.TextCard, os.Stdout)
         }
-        if err != nil { return }
-        _, err = os.Stdout.Write(b)
     }
     return
 }

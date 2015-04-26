@@ -11,7 +11,7 @@ func (t *Token) Read(r io.Reader) error {
     val, err := butils.ReadUint64(r)
     if err != nil { return err }
     *t = Token(val)
-    return
+    return nil
 }
 
 func (t *Token) Write(w io.Writer) error {

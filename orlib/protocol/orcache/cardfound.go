@@ -13,10 +13,10 @@ type CardFound struct {
 
 func (m *CardFound) Read(r io.Reader) (err error) {
     if err = m.Token.Read(r); err != nil { return }
-    var card []byte
-    if card, err = butils.ReadVarBytes(r); err != nil { return }
+    var c []byte
+    if c, err = butils.ReadVarBytes(r); err != nil { return }
     m.Card = &card.Card{}
-    return m.Card.ReadBytes(card)
+    return m.Card.ReadBytes(c)
 }
 
 func (m *CardFound) Write(w io.Writer) error {

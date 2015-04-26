@@ -11,7 +11,7 @@ func (t *TTL) Read(r io.Reader) error {
     val, err := butils.ReadUint8(r)
     if err != nil { return err }
     *t = TTL(val)
-    return
+    return nil
 }
 
 func (t *TTL) Write(w io.Writer) error {

@@ -2,10 +2,11 @@ package main
 import (
     "fmt"
     "flag"
-    "orwell/orlib/protocol/orcache"
-    "orwell/orlib/protocol/types"
     "io"
     "orwell/orlib/crypto/card"
+    "orwell/orlib/crypto/armor"
+    "orwell/orlib/conv"
+    "orwell/orlib/protocol/common"
 )
 
 type publishCommand struct{}
@@ -33,13 +34,15 @@ func (publishCommand) Main(args []string) (err error) {
     if r, err = FileOrSTDIN(fs.Arg(0)); err != nil { return }
 
     var c *card.Card
-    if c, err = card.UnmarshalReader(r); err != nil { return }
+    if err = armor.DecodeFromTo(r, c); err != nil { return }
 
-    var ms *orcache.OrcacheMessenger
-    if ms, err = orcache.SimpleClient(*fTg); err != nil { return }
+    var cv *conv.Conversation
+    if cv, err = conv.CreateTCPConversation(*fTg); err != nil { return }
 
-    var ttl types.TTL
-    if ttl, err = ms.Put(c); err != nil { return }
+    if err = cv.DoHandshake("ortool", nil); err != nil { return }
+
+    var ttl common.TTL
+    if ttl, err = cv.DoPut(c); err != nil { return }
 
     fmt.Println("Published. TTL =", ttl)
     return

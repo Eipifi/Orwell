@@ -15,10 +15,10 @@ type Publish struct {
 func (p *Publish) Read(r io.Reader) (err error) {
     if err = p.Token.Read(r); err != nil { return }
     if err = p.TTL.Read(r); err != nil { return }
-    var card []byte
-    if card, err = butils.ReadVarBytes(r); err != nil { return }
+    var c []byte
+    if c, err = butils.ReadVarBytes(r); err != nil { return }
     p.Card = &card.Card{}
-    return p.Card.ReadBytes(card)
+    return p.Card.ReadBytes(c)
 }
 
 func (p *Publish) Write(w io.Writer) (err error) {

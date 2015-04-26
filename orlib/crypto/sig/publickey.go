@@ -5,9 +5,8 @@ import (
     "crypto/x509"
     "errors"
     "orwell/orlib/crypto/hash"
+    "orwell/orlib/butils"
 )
-
-// TODO: make PublicKey implement Readable
 
 type PublicKey struct {
     obj *ecdsa.PublicKey
@@ -16,7 +15,7 @@ type PublicKey struct {
 func (k *PublicKey) Write(w io.Writer) error {
     data, err := x509.MarshalPKIXPublicKey(k.obj)
     if err != nil { return err }
-    return w.Write(data)
+    return butils.WriteFull(w, data)
 }
 
 func (k *PublicKey) ReadBytes(data []byte) error {
@@ -28,11 +27,17 @@ func (k *PublicKey) ReadBytes(data []byte) error {
         default:
             return errors.New("Unsupported key type")
     }
-    return
+    return nil
 }
 
 func (k *PublicKey) WriteBytes() (data []byte, err error) {
     return x509.MarshalPKIXPublicKey(k.obj)
+}
+
+func (k *PublicKey) VerifyByteWritable(w butils.ByteWritable, signature *Signature) error {
+    buf, err := w.WriteBytes()
+    if err != nil { return err }
+    return k.Verify(buf, signature)
 }
 
 func (k *PublicKey) Verify(payload []byte, signature *Signature) error {

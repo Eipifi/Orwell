@@ -1,7 +1,6 @@
 package sig
 import (
     "crypto/ecdsa"
-    "io"
     "crypto/x509"
     "crypto/rand"
     "crypto/elliptic"
@@ -9,24 +8,18 @@ import (
     "orwell/orlib/crypto/hash"
 )
 
-// TODO: make PrivateKey implement Readable
-
 type PrivateKey struct {
     obj *ecdsa.PrivateKey
 }
 
 func (k *PrivateKey) ReadBytes(data []byte) error {
     prv, err := x509.ParseECPrivateKey(data)
-    if err != nil { return err }
-    // TODO: validate if the proper elliptic curve is used
     k.obj = prv
-    return
+    return err
 }
 
-func (k *PrivateKey) Write(w io.Writer) error {
-    data, err := x509.MarshalECPrivateKey(k.obj)
-    if err != nil { return err }
-    return w.Write(data)
+func (k *PrivateKey) WriteBytes() ([]byte, error) {
+    return x509.MarshalECPrivateKey(k.obj)
 }
 
 func (k *PrivateKey) PublicPart() *PublicKey {
@@ -40,14 +33,14 @@ func (k *PrivateKey) Sign(payload []byte) (*Signature, error) {
     return &Signature{r, s}, nil
 }
 
-func (k *PrivateKey) SignWritable(w butils.Writable) (*Signature, err error) {
-    var buf []byte
-    if buf, err = butils.WriteToBytes(w); err != nil { return }
+func (k *PrivateKey) SignByteWritable(w butils.ByteWritable) (*Signature, error) {
+    buf, err := w.WriteBytes()
+    if err != nil { return nil, err }
     return k.Sign(buf)
 }
 
 func CreateKey() (*PrivateKey, error) {
     key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-    if err != nil { return }
-    return &PrivateKey{key}
+    if err != nil { return nil, err }
+    return &PrivateKey{key}, nil
 }

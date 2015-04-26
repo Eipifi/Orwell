@@ -1,21 +1,12 @@
 package sig
 import (
     "math/big"
-    "io"
-    "github.com/eipifi/asn1"
     "errors"
+    "encoding/asn1"
 )
 
 type Signature struct {
     R, S *big.Int
-}
-
-func (s *Signature) Read(r io.Reader) error {
-    return asn1.UnmarshalFromReader(s, r)
-}
-
-func (s *Signature) Write(w io.Writer) error {
-    return asn1.MarshalToWriter(s, w)
 }
 
 func (s *Signature) ReadBytes(data []byte) error {
@@ -26,6 +17,6 @@ func (s *Signature) ReadBytes(data []byte) error {
 }
 
 func (s *Signature) WriteBytes() ([]byte, error) {
-    return asn1.Marshal(s)
+    return asn1.Marshal(*s)
 }
 

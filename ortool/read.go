@@ -44,9 +44,12 @@ func (readCommand) Main(args []string) (err error) {
     if err = c.ReadBytes(data); err == nil {
         fmt.Println("CARD")
         fmt.Println("ID:", c.Key.Id())
-        json, err := c.Payload.WriteJSON()
+        var json []byte
+        json, err = c.Payload.WriteJSON()
         if err != nil { return }
         return butils.WriteFull(os.Stdout, json)
+    } else {
+        return err
     }
 
     return errors.New("PEM content not recognized")

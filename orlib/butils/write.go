@@ -16,20 +16,20 @@ func WriteUint8(w io.Writer, val uint8) error {
 
 func WriteUint16(w io.Writer, val uint16) error {
     var tmp [2]byte
-    ByteOrder.PutUint16(tmp, val)
-    return WriteFull(w, tmp)
+    ByteOrder.PutUint16(tmp[:], val)
+    return WriteFull(w, tmp[:])
 }
 
 func WriteUint32(w io.Writer, val uint32) error {
     var tmp [4]byte
-    ByteOrder.PutUint32(tmp, val)
-    return WriteFull(w, tmp)
+    ByteOrder.PutUint32(tmp[:], val)
+    return WriteFull(w, tmp[:])
 }
 
 func WriteUint64(w io.Writer, val uint64) error {
     var tmp [8]byte
-    ByteOrder.PutUint64(tmp, val)
-    return WriteFull(w, tmp)
+    ByteOrder.PutUint64(tmp[:], val)
+    return WriteFull(w, tmp[:])
 }
 
 func WriteVarUint(w io.Writer, val uint64) (err error) {
@@ -52,7 +52,7 @@ func WriteVarUint(w io.Writer, val uint64) (err error) {
 }
 
 func WriteVarBytes(w io.Writer, buf []byte) error {
-    if err := WriteVarUint(w, len(buf)); err != nil { return err }
+    if err := WriteVarUint(w, uint64(len(buf))); err != nil { return err }
     return WriteFull(w, buf)
 }
 

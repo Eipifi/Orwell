@@ -1,9 +1,8 @@
 package card
 import (
-    "io"
-    "github.com/eipifi/asn1"
     "encoding/json"
     "orwell/orlib/crypto/sig"
+    "encoding/asn1"
 )
 
 type Payload struct {
@@ -18,12 +17,12 @@ type Record struct {
     Value string `asn1:"utf8" json:"value"`
 }
 
-func (p *Payload) Read(r io.Reader) error {
-    return asn1.UnmarshalFromReader(p, r)
+func (p *Payload) ReadBytes(data []byte) error {
+    return unmarshalAll(data, p)
 }
 
-func (p *Payload) Write(w io.Writer) error {
-    return asn1.MarshalToWriter(p, w)
+func (p *Payload) WriteBytes() ([]byte, error) {
+    return asn1.Marshal(*p)
 }
 
 func (p *Payload) ReadJSON(data []byte) error {
@@ -38,6 +37,6 @@ func (p *Payload) Sign(key *sig.PrivateKey) (c *Card, err error) {
     c = &Card{}
     c.Payload = p
     c.Key = key.PublicPart()
-    c.Signature, err = key.SignWritable(p)
+    c.Signature, err = key.SignByteWritable(p)
     return
 }

@@ -4,6 +4,7 @@ import (
     "orwell/orlib/butils"
     "crypto/sha256"
     "encoding/hex"
+    "errors"
 )
 
 const (
@@ -33,4 +34,13 @@ func Hash(data []byte) []byte {
 
 func (id *ID) String() string {
     return hex.EncodeToString(id[:])
+}
+
+func HexToID(h string) (*ID, error) {
+    b, err := hex.DecodeString(h)
+    if err != nil { return nil, err }
+    if len(b) != ByteLength { return nil, errors.New("Invalid hex length") }
+    id := ID{}
+    copy(id[:], b)
+    return &id, nil
 }

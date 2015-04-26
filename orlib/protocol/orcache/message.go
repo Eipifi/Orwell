@@ -1,6 +1,5 @@
 package orcache
 import (
-    "orwell/orlib"
     "io"
     "orwell/orlib/butils"
     "errors"
@@ -29,6 +28,13 @@ func (m *Message) Write(w io.Writer) (err error) {
     return butils.WriteVarBytes(w, payload)
 }
 
+func (m *Message) ReadSpecific(r io.Reader, chunk butils.Chunk) (err error) {
+    if m.Command, err = butils.ReadVarUint(r); err != nil { return }
+    if m.Command != chunkToCommand(chunk) { return errors.New("Unexpected message code") }
+    m.Chunk = chunk
+    return chunk.Read(r)
+}
+
 func NewMessage(chunk butils.Chunk) *Message {
     m := &Message{}
     m.Chunk = chunk
@@ -48,7 +54,7 @@ func commandToChunk(command uint64) butils.Chunk {
 }
 
 func chunkToCommand(chunk butils.Chunk) uint64 {
-    switch chunk := chunk.(type) {
+    switch chunk.(type) {
         case *Handshake:    return 0x01
         case *Get:          return 0x02
         case *Publish:      return 0x03

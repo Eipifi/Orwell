@@ -41,11 +41,11 @@ func (gencardCommand) Main(args []string) (err error) {
 
     keyPEM, err := ioutil.ReadFile(args[0])
     if err != nil { return }
-    pldJSON, err := os.Open(args[1])
+    pldJSON, err := ioutil.ReadFile(args[1])
     if err != nil { return }
 
     key := &sig.PrivateKey{}
-    if err = key.ReadBytes(keyPEM); err != nil { return }
+    if err = armor.DecodeTo(keyPEM, key); err != nil { return }
 
     pld := &card.Payload{}
     if err = pld.ReadJSON(pldJSON); err != nil { return }
