@@ -19,7 +19,7 @@ func Find(req *orcache.Get) (res GetResult) {
             if peer == nil { return }
             if r := peer.AskGet(&orcache.Get{req.Token, res.TTL, req.ID, req.Version}); r != nil {
                 if r.Card != nil {
-                    Storage.Put(req.ID, r.Card)
+                    Storage.Put(r.Card)
                     return *r
                 }
                 if r.TTL < res.TTL { res.TTL = r.TTL }

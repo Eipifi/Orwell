@@ -6,6 +6,7 @@ import (
     "log"
     "os"
     "orwell/orlib/butils"
+    "orwell/orlib/protocol/common"
 )
 
 type Peer struct {
@@ -13,6 +14,8 @@ type Peer struct {
     hs *orcache.Handshake
     Log *log.Logger
     Out chan<- butils.Chunk
+    ToDo chan GetOrder
+    Orders map[common.Token] GetOrder
 }
 
 func HandleConnection(conn net.Conn) {
@@ -34,12 +37,15 @@ func (p *Peer) lifecycle() (err error) {
 
     inbox := conv.MessageListener(p.cn)
     p.Out = conv.MessageSender(p.cn)
+    p.ToDo = make(chan GetOrder)
     for {
         select {
             case msg := <- inbox:
                 if msg == nil { return }
                 p.Log.Println("Received", msg)
                 p.handleMessage(msg)
+            case order := <- p.ToDo:
+                p.handleOrder(order)
         }
     }
     return

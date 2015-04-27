@@ -44,3 +44,7 @@ func HexToID(h string) (*ID, error) {
     copy(id[:], b)
     return &id, nil
 }
+
+func Equal(id1 *ID, id2 *ID) bool {
+    panic("Not implemented")
+}
