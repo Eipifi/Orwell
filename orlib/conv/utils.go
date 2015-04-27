@@ -30,3 +30,16 @@ func MessageListener(conn io.Reader) <-chan butils.Chunk {
     }()
     return c
 }
+
+func MessageSender(conn io.WriteCloser) chan<- butils.Chunk {
+    c := make(chan butils.Chunk)
+    go func(){
+        defer conn.Close()
+        for {
+            chunk := <- c
+            if chunk == nil { return }
+            if orcache.Msg(chunk).Write(conn) != nil { return }
+        }
+    }()
+    return c
+}
