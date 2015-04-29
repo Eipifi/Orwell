@@ -11,12 +11,14 @@ type GetResult struct {
 }
 
 func Find(req *orcache.Get) (res GetResult) {
+    res.TTL = req.TTL
     if res.Card = Storage.Get(req.ID, req.Version); res.Card != nil { return }
     if Locker.Lock(req.Token) {
         defer Locker.Unlock(req.Token)
-        for res.TTL = req.TTL - 1; res.TTL > 0; res.TTL-- {
+        for {
             peer := FindPeer(req.ID)
             if peer == nil { return }
+            res.TTL -= 1
             if r := peer.AskGet(&orcache.Get{req.Token, res.TTL, req.ID, req.Version}); r != nil {
                 if r.Card != nil {
                     Storage.Put(r.Card)
@@ -26,6 +28,6 @@ func Find(req *orcache.Get) (res GetResult) {
             }
             if res.Card = Storage.Get(req.ID, req.Version); res.Card != nil { return }
         }
-    } else { res.TTL = req.TTL }
+    }
     return
 }

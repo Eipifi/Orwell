@@ -51,6 +51,7 @@ func commandToChunk(command uint64) butils.Chunk {
     if command == 0x81 { return &HandshakeAck{} }
     if command == 0x82 { return &CardFound{} }
     if command == 0x83 { return &CardNotFound{} }
+    if command == 0x84 { return &Published{} }
     return nil
 }
 
@@ -62,6 +63,7 @@ func chunkToCommand(chunk butils.Chunk) uint64 {
         case *HandshakeAck: return 0x81
         case *CardFound:    return 0x82
         case *CardNotFound: return 0x83
+        case *Published:    return 0x84
     }
     return 0
 }

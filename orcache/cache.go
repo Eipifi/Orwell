@@ -10,7 +10,7 @@ import (
     2. Provide concurrency safety
 */
 
-var Storage Cache = &MapCache{}
+var Storage Cache = NewMapCache()
 
 type Cache interface {
     Get(*hash.ID, uint64) *card.Card
@@ -19,6 +19,12 @@ type Cache interface {
 
 type MapCache struct {
     data map[hash.ID] *card.Card
+}
+
+func NewMapCache() *MapCache {
+    m := &MapCache{}
+    m.data = make(map[hash.ID] *card.Card)
+    return m
 }
 
 func (c *MapCache) Get(id *hash.ID, version uint64) *card.Card {

@@ -33,7 +33,7 @@ func (publishCommand) Main(args []string) (err error) {
     var r io.Reader
     if r, err = FileOrSTDIN(fs.Arg(0)); err != nil { return }
 
-    var c *card.Card
+    c := &card.Card{}
     if err = armor.DecodeFromTo(r, c); err != nil { return }
 
     var cv *conv.Conversation
