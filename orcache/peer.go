@@ -6,7 +6,6 @@ import (
     "log"
     "os"
     "orwell/orlib/butils"
-    "orwell/orlib/protocol/common"
 )
 
 type Peer struct {
@@ -14,10 +13,8 @@ type Peer struct {
     hs *orcache.Handshake
     Log *log.Logger
     Out chan<- butils.Chunk
-    ToGet chan GetOrder
-    ToPut chan PutOrder
-    GetOrders map[common.Token] GetOrder
-    PutOrders map[common.Token] PutOrder
+    GetOrders *OrderManager
+    PutOrders *OrderManager
 }
 
 func HandleConnection(conn net.Conn) {
@@ -33,34 +30,29 @@ func HandleConnection(conn net.Conn) {
 
 func (p *Peer) lifecycle() (err error) {
     defer p.close()
-    p.Log.Println("Connected")
     if p.hs, err = conv.ShakeHands(p.cn, "orcache", nil); err != nil { return }
-    p.Log.Println("HS:", p.hs)
-
     inbox := conv.MessageListener(p.cn)
     p.Out = conv.MessageSender(p.cn)
-    p.ToGet = make(chan GetOrder)
-    p.ToPut = make(chan PutOrder)
+    p.GetOrders = NewOrderManager(p.Out)
+    p.PutOrders = NewOrderManager(p.Out)
     for {
         select {
             case msg := <- inbox:
                 if msg == nil { return }
                 p.Log.Println("Received", msg)
                 p.handleMessage(msg)
-            case order := <- p.ToGet: p.handleGetOrder(order)
-            case order := <- p.ToPut: p.handlePutOrder(order)
         }
     }
     return
 }
 
 func (p *Peer) close() error {
-    p.Log.Println("Disconnected")
     close(p.Out)
+    p.GetOrders.Close()
+    p.PutOrders.Close()
     return p.cn.Close()
 }
 
 func (p *Peer) AsyncSend(msg butils.Chunk) {
-    p.Log.Println("sending", msg)
     go func(){ p.Out <- msg }()
 }

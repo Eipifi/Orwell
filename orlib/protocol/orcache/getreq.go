@@ -6,14 +6,14 @@ import (
     "orwell/orlib/butils"
 )
 
-type Get struct {
+type GetReq struct {
     Token common.Token
     TTL common.TTL
     ID *hash.ID
     Version uint64
 }
 
-func (g *Get) Read(r io.Reader) (err error) {
+func (g *GetReq) Read(r io.Reader) (err error) {
     if err = g.Token.Read(r); err != nil { return }
     if err = g.TTL.Read(r); err != nil { return }
     g.ID = &hash.ID{}
@@ -22,9 +22,13 @@ func (g *Get) Read(r io.Reader) (err error) {
     return
 }
 
-func (g *Get) Write(w io.Writer) (err error) {
+func (g *GetReq) Write(w io.Writer) (err error) {
     if err = g.Token.Write(w); err != nil { return }
     if err = g.TTL.Write(w); err != nil { return }
     if err = g.ID.Write(w); err != nil { return }
     return butils.WriteVarUint(w, g.Version)
+}
+
+func (g *GetReq) GetToken() common.Token {
+    return g.Token
 }

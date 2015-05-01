@@ -4,18 +4,22 @@ import (
     "io"
 )
 
-type Published struct {
+type PublishRsp struct {
     Token common.Token
     TTL common.TTL
 }
 
-func (p *Published) Read(r io.Reader) (err error) {
+func (p *PublishRsp) Read(r io.Reader) (err error) {
     if err = p.Token.Read(r); err != nil { return }
     if err = p.TTL.Read(r); err != nil { return }
     return
 }
 
-func (p *Published) Write(w io.Writer) (err error) {
+func (p *PublishRsp) Write(w io.Writer) (err error) {
     if err = p.Token.Write(w); err != nil { return }
     return p.TTL.Write(w)
+}
+
+func (p *PublishRsp) GetToken() common.Token {
+    return p.Token
 }

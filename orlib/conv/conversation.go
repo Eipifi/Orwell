@@ -52,24 +52,21 @@ func (c *Conversation) DoHandshake(userAgent string, addr *common.Address) (err 
 
 func (c *Conversation) DoGet(id *hash.ID, ver uint64) (cd *card.Card, err error) {
     token := common.NewRandomToken()
-    if err = c.Write(&orcache.Get{token, common.MaxTTLValue, id, ver}); err != nil { return }
+    if err = c.Write(&orcache.GetReq{token, common.MaxTTLValue, id, ver}); err != nil { return }
     rsp, err := c.ReadAny()
     if err != nil { return nil, err }
     switch r := rsp.(type) {
-        case *orcache.CardFound:
+        case *orcache.GetRsp:
             if r.Token != token { return nil, ErrTokenMismatch }
             return r.Card, nil
-        case *orcache.CardNotFound:
-            if r.Token != token { return nil, ErrTokenMismatch }
-            return nil, nil
     }
     return nil, errors.New("Unexpected response type")
 }
 
 func (c *Conversation) DoPut(cd *card.Card) (ttl common.TTL, err error) {
     token := common.NewRandomToken()
-    if err = c.Write(&orcache.Publish{token, common.MaxTTLValue, cd}); err != nil { return }
-    rsp := &orcache.Published{}
+    if err = c.Write(&orcache.PublishReq{token, common.MaxTTLValue, cd}); err != nil { return }
+    rsp := &orcache.PublishRsp{}
     if err = c.ReadSpecific(rsp); err != nil { return }
     if rsp.Token != token { return common.TTL(0), ErrTokenMismatch }
     return rsp.TTL, nil

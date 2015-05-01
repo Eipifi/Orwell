@@ -46,24 +46,26 @@ func Msg(chunk butils.Chunk) *Message {
 
 func commandToChunk(command uint64) butils.Chunk {
     if command == 0x01 { return &Handshake{} }
-    if command == 0x02 { return &Get{} }
-    if command == 0x03 { return &Publish{} }
     if command == 0x81 { return &HandshakeAck{} }
-    if command == 0x82 { return &CardFound{} }
-    if command == 0x83 { return &CardNotFound{} }
-    if command == 0x84 { return &Published{} }
+
+    if command == 0x02 { return &GetReq{} }
+    if command == 0x82 { return &GetRsp{} }
+
+    if command == 0x03 { return &PublishReq{} }
+    if command == 0x83 { return &PublishRsp{} }
     return nil
 }
 
 func chunkToCommand(chunk butils.Chunk) uint64 {
     switch chunk.(type) {
-        case *Handshake:    return 0x01
-        case *Get:          return 0x02
-        case *Publish:      return 0x03
-        case *HandshakeAck: return 0x81
-        case *CardFound:    return 0x82
-        case *CardNotFound: return 0x83
-        case *Published:    return 0x84
+        case *Handshake:        return 0x01
+        case *HandshakeAck:     return 0x81
+
+        case *GetReq:           return 0x02
+        case *GetRsp:           return 0x82
+
+        case *PublishReq:       return 0x03
+        case *PublishRsp:       return 0x83
     }
     return 0
 }
