@@ -13,8 +13,8 @@ type Peer struct {
     hs *orcache.Handshake
     Log *log.Logger
     Out chan<- butils.Chunk
-    GetOrders *OrderManager
-    PutOrders *OrderManager
+    GetOrders *RequestRouter
+    PutOrders *RequestRouter
 }
 
 func HandleConnection(conn net.Conn) {
@@ -33,13 +33,12 @@ func (p *Peer) lifecycle() (err error) {
     if p.hs, err = conv.ShakeHands(p.cn, "orcache", nil); err != nil { return }
     inbox := conv.MessageListener(p.cn)
     p.Out = conv.MessageSender(p.cn)
-    p.GetOrders = NewOrderManager(p.Out)
-    p.PutOrders = NewOrderManager(p.Out)
+    p.GetOrders = NewRouter(p.Out)
+    p.PutOrders = NewRouter(p.Out)
     for {
         select {
             case msg := <- inbox:
                 if msg == nil { return }
-                p.Log.Println("Received", msg)
                 p.handleMessage(msg)
         }
     }
