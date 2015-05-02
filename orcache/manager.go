@@ -1,28 +1,45 @@
 package main
 import (
-    "orwell/orlib/crypto/hash"
     "log"
     "os"
+    "orwell/orlib/crypto/hash"
+    "orwell/orlib/protocol/common"
 )
 
-var Manager *PeerManager = NewManager()
-
-func NewManager() *PeerManager {
-    return &PeerManager{Log: log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)}
+type PeerFinder interface {
+    Find(*hash.ID) *Peer
 }
 
-type PeerManager struct {
-    Log *log.Logger
+type Manager interface {
+    PeerFinder
+    Join(*Peer)
+    Leave(*Peer)
+    LocalAddress() *common.Address
 }
 
-func (m *PeerManager) Join(p *Peer) {
-    m.Log.Println("Peer joined:", p.Hs)
+type ManagerImpl struct {
+    log *log.Logger
+    address *common.Address
 }
 
-func (m *PeerManager) Leave(p *Peer) {
-    m.Log.Println("Peer left:", p.Hs)
+func NewManagerImpl() Manager {
+    m := &ManagerImpl{}
+    m.log = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
+    return m
 }
 
-func (m *PeerManager) FindPeer(id *hash.ID) *Peer {
+func (m *ManagerImpl) Join(peer *Peer) {
+    m.log.Println("Joined:", peer.Hs)
+}
+
+func (m *ManagerImpl) Leave(peer *Peer) {
+    m.log.Println("Left:", peer.Hs)
+}
+
+func (m *ManagerImpl) Find(*hash.ID) *Peer {
     return nil
+}
+
+func (m *ManagerImpl) LocalAddress() *common.Address {
+    return m.address
 }

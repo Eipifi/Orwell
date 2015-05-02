@@ -15,7 +15,7 @@ func GetRspValidator(req *orcache.GetReq) func(orcache.ChunkWithToken) bool {
     }
 }
 
-func Find(req *orcache.GetReq) (rsp *orcache.GetRsp) {
+func Find(req *orcache.GetReq, pf PeerFinder) (rsp *orcache.GetRsp) {
     rsp = &orcache.GetRsp{req.Token, req.TTL, nil}
     if rsp.Card = Storage.Get(req.ID, req.Version); rsp.Card != nil { return }
     if Locker.Lock(rsp.Token) {
@@ -23,7 +23,7 @@ func Find(req *orcache.GetReq) (rsp *orcache.GetRsp) {
         defer Locker.Unlock(rsp.Token)
         for {
             if rsp.TTL == 0 { return }
-            peer := Manager.FindPeer(req.ID)
+            peer := pf.Find(req.ID)
             if peer == nil { return }
             rsp.TTL -= 1
             if r := peer.GetOrders.Ask(&orcache.GetReq{rsp.Token, rsp.TTL, req.ID, req.Version}, validator); r != nil {
@@ -40,14 +40,14 @@ func Find(req *orcache.GetReq) (rsp *orcache.GetRsp) {
     return
 }
 
-func Publish(req *orcache.PublishReq) (rsp *orcache.PublishRsp) {
+func Publish(req *orcache.PublishReq, pf PeerFinder) (rsp *orcache.PublishRsp) {
     rsp = &orcache.PublishRsp{req.Token, req.TTL}
     Storage.Put(req.Card)
     if Locker.Lock(req.Token) {
         defer Locker.Unlock(req.Token)
         for {
             if rsp.TTL == 0 { return }
-            peer := Manager.FindPeer(req.Card.Key.Id())
+            peer := pf.Find(req.Card.Key.Id())
             if peer == nil { return }
             if r := peer.PutOrders.Ask(&orcache.PublishReq{rsp.Token, rsp.TTL, req.Card}, nil); r != nil {
                 nrsp := r.(*orcache.PublishRsp) // correct type assumed

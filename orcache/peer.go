@@ -10,34 +10,37 @@ import (
 )
 
 type Peer struct {
-    cn net.Conn
     Hs *orcache.Handshake
-    Log *log.Logger
-    out chan<- butils.Chunk
     GetOrders *RequestRouter
     PutOrders *RequestRouter
+
+    cn net.Conn
+    log *log.Logger
+    out chan<- butils.Chunk
     closed bool
     mtx *sync.Mutex
+    mgr Manager
 }
 
-func HandleConnection(conn net.Conn) {
-    go func(){
-        prefix := conn.RemoteAddr().String() + " "
-        peer := &Peer{}
-        peer.cn = conn
-        peer.Log = log.New(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
-        peer.closed = false
-        peer.mtx = &sync.Mutex{}
-        err := peer.lifecycle()
-        if err != nil {
-            peer.Log.Println(err)
-        }
-    }()
+func NewPeer(conn net.Conn, mgr Manager) *Peer {
+    prefix := conn.RemoteAddr().String() + " "
+    peer := &Peer{}
+    peer.cn = conn
+    peer.log = log.New(os.Stdout, prefix, log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
+    peer.closed = false
+    peer.mtx = &sync.Mutex{}
+    peer.mgr = mgr
+    go peer.lifecycle()
+    return peer
 }
 
-func (p *Peer) lifecycle() (err error) {
+func (p *Peer) lifecycle() {
+    var err error
     // Establish connection by exchanging handshakes
-    if p.Hs, err = conv.ShakeHands(p.cn, "orcache", nil); err != nil { return }
+    if p.Hs, err = conv.ShakeHands(p.cn, "orcache", p.mgr.LocalAddress()); err != nil {
+        p.log.Println("Handshake exchange failed:", err)
+        return
+    }
     // Ensure proper finalization
     defer p.close()
     // Start listening on incoming messages (channel will close on socket close / error)
@@ -49,7 +52,7 @@ func (p *Peer) lifecycle() (err error) {
     // Start the PUT request manager
     p.PutOrders = NewRouter(p.out)
     // Finally announce peer presence to manager
-    Manager.Join(p)
+    p.mgr.Join(p)
     // Loop
     for {
         select {
@@ -67,22 +70,23 @@ func (p *Peer) close() error {
     defer p.mtx.Unlock()
     if p.closed { return nil }
     p.closed = true
-    Manager.Leave(p)        // announce that the peer is no longer reachable
+    p.mgr.Leave(p)        // announce that the peer is no longer reachable
     close(p.out)            // close the send channel
     p.GetOrders.Close()     // cancel all get orders
     p.PutOrders.Close()     // cancel all put orders
     return p.cn.Close()     // finally close the socket
 }
 
+// Sends the given message to remote peer
 func (p *Peer) Send(msg butils.Chunk) {
     p.out <- msg
 }
 
 func (p *Peer) handleMessage(msg butils.Chunk) {
     switch msg := msg.(type) {
-        case *orcache.GetReq:       go p.Send(Find(msg))
+        case *orcache.GetReq:       go p.Send(Find(msg, p.mgr))
         case *orcache.GetRsp:       if !p.GetOrders.Respond(msg) { p.close() }
-        case *orcache.PublishReq:   go p.Send(Publish(msg))
+        case *orcache.PublishReq:   go p.Send(Publish(msg, p.mgr))
         case *orcache.PublishRsp:   if !p.PutOrders.Respond(msg) { p.close() }
         default: panic("Unrecognized message type")
     }
