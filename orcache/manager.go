@@ -80,7 +80,8 @@ func (m *ManagerImpl) Run() error {
     if m.address.IsInternal() {
         ext_msg = "(port 0 means an externally unreachable NAT address)"
     }
-    m.log.Println("Advertised address", m.address, ext_msg)
+    m.log.Println("Advertised address:", m.address, ext_msg)
+    m.log.Println("Advertised id:", m.address.Id())
     socket, err := net.Listen("tcp", ":" + strconv.FormatUint(uint64(actual_port), 10))
     m.log.Println("Listening on TCP port", actual_port)
     if err != nil { return err }

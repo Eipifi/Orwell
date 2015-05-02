@@ -5,6 +5,7 @@ import (
     "net"
     "strconv"
     "errors"
+    "orwell/orlib/crypto/hash"
 )
 
 type Address struct {
@@ -35,4 +36,10 @@ func (a *Address) String() string {
 
 func (a *Address) IsInternal() bool {
     return a.Port == 0
+}
+
+func (a *Address) Id() *hash.ID {
+    buf, err := butils.WriteToBytes(a)
+    if err != nil { return nil }
+    return hash.NewId(buf)
 }
