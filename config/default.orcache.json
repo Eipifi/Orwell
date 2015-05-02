@@ -1,5 +1,7 @@
 {
   "ip": "",
   "port": 1984,
+  "port_is_external": false,
+  "try_upnp": true,
   "nonce": 4815162342
 }

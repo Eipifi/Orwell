@@ -32,3 +32,7 @@ func (a *Address) Write(w io.Writer) (err error) {
 func (a *Address) String() string {
     return a.IP.String() + ":" + strconv.FormatUint(uint64(a.Port), 10) + " [nonce:" + strconv.FormatUint(a.Nonce, 16) + "]"
 }
+
+func (a *Address) IsInternal() bool {
+    return a.Port == 0
+}
