@@ -52,11 +52,11 @@ func (c *Conversation) DoHandshake(userAgent string, addr *common.Address) (err 
 
 func (c *Conversation) DoGet(id *hash.ID, ver uint64) (cd *card.Card, err error) {
     token := common.NewRandomToken()
-    if err = c.Write(&orcache.GetReq{token, common.MaxTTLValue, id, ver}); err != nil { return }
+    if err = c.Write(&orcache.FetchReq{token, common.MaxTTLValue, id, ver}); err != nil { return }
     rsp, err := c.ReadAny()
     if err != nil { return nil, err }
     switch r := rsp.(type) {
-        case *orcache.GetRsp:
+        case *orcache.FetchRsp:
             if r.Token != token { return nil, ErrTokenMismatch }
             return r.Card, nil
     }

@@ -11,8 +11,8 @@ import (
 
 type Peer struct {
     Hs *orcache.Handshake
-    GetOrders *RequestRouter
-    PutOrders *RequestRouter
+    FetchOrders *RequestRouter
+    PublishOrders *RequestRouter
 
     cn net.Conn
     log *log.Logger
@@ -47,10 +47,10 @@ func (p *Peer) lifecycle() {
     inbox := conv.MessageListener(p.cn)
     // Start sending outgoing messages (socket will be closed on chan close / error)
     p.out = conv.MessageSender(p.cn)
-    // Start the GET request manager
-    p.GetOrders = NewRouter(p.out)
-    // Start the PUT request manager
-    p.PutOrders = NewRouter(p.out)
+    // Start the FETCH request manager
+    p.FetchOrders = NewRouter(p.out)
+    // Start the PUBLISH request manager
+    p.PublishOrders = NewRouter(p.out)
     // Finally announce peer presence to manager
     p.mgr.Join(p)
     // Loop
@@ -70,10 +70,10 @@ func (p *Peer) close() error {
     defer p.mtx.Unlock()
     if p.closed { return nil }
     p.closed = true
-    p.mgr.Leave(p)        // announce that the peer is no longer reachable
+    p.mgr.Leave(p)          // announce that the peer is no longer reachable
     close(p.out)            // close the send channel
-    p.GetOrders.Close()     // cancel all get orders
-    p.PutOrders.Close()     // cancel all put orders
+    p.FetchOrders.Close()   // cancel all get orders
+    p.PublishOrders.Close() // cancel all put orders
     return p.cn.Close()     // finally close the socket
 }
 
@@ -84,10 +84,10 @@ func (p *Peer) Send(msg butils.Chunk) {
 
 func (p *Peer) handleMessage(msg butils.Chunk) {
     switch msg := msg.(type) {
-        case *orcache.GetReq:       go p.Send(Find(msg, p.mgr))
-        case *orcache.GetRsp:       if !p.GetOrders.Respond(msg) { p.close() }
+        case *orcache.FetchReq:     go p.Send(Find(msg, p.mgr))
+        case *orcache.FetchRsp:     if !p.FetchOrders.Respond(msg) { p.close() }
         case *orcache.PublishReq:   go p.Send(Publish(msg, p.mgr))
-        case *orcache.PublishRsp:   if !p.PutOrders.Respond(msg) { p.close() }
+        case *orcache.PublishRsp:   if !p.PublishOrders.Respond(msg) { p.close() }
         default: panic("Unrecognized message type")
     }
 }

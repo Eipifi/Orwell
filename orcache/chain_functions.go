@@ -4,10 +4,10 @@ import (
     "orwell/orlib/crypto/hash"
 )
 
-func GetRspValidator(req *orcache.GetReq) func(orcache.ChunkWithToken) bool {
+func GetRspValidator(req *orcache.FetchReq) func(orcache.ChunkWithToken) bool {
     return func(msg orcache.ChunkWithToken) bool {
         switch msg := msg.(type) {
-            case *orcache.GetRsp:
+            case *orcache.FetchRsp:
                 if msg.Card == nil { return true }
                 return hash.Equal(msg.Card.Key.Id(), req.ID) && uint64(msg.Card.Payload.Version) >= req.Version // TODO: fix this damn int64
             default: return false
@@ -15,8 +15,8 @@ func GetRspValidator(req *orcache.GetReq) func(orcache.ChunkWithToken) bool {
     }
 }
 
-func Find(req *orcache.GetReq, pf PeerFinder) (rsp *orcache.GetRsp) {
-    rsp = &orcache.GetRsp{req.Token, req.TTL, nil}
+func Find(req *orcache.FetchReq, pf PeerFinder) (rsp *orcache.FetchRsp) {
+    rsp = &orcache.FetchRsp{req.Token, req.TTL, nil}
     if rsp.Card = Storage.Get(req.ID, req.Version); rsp.Card != nil { return }
     if Locker.Lock(rsp.Token) {
         validator := GetRspValidator(req)
@@ -26,8 +26,8 @@ func Find(req *orcache.GetReq, pf PeerFinder) (rsp *orcache.GetRsp) {
             peer := pf.Find(req.ID)
             if peer == nil { return }
             rsp.TTL -= 1
-            if r := peer.GetOrders.Ask(&orcache.GetReq{rsp.Token, rsp.TTL, req.ID, req.Version}, validator); r != nil {
-                nrsp := r.(*orcache.GetRsp) // correct type assumed
+            if r := peer.FetchOrders.Ask(&orcache.FetchReq{rsp.Token, rsp.TTL, req.ID, req.Version}, validator); r != nil {
+                nrsp := r.(*orcache.FetchRsp) // correct type assumed
                 if nrsp.TTL < rsp.TTL { rsp.TTL = nrsp.TTL }
                 if nrsp.Card != nil {
                     rsp.Card = nrsp.Card
@@ -49,7 +49,7 @@ func Publish(req *orcache.PublishReq, pf PeerFinder) (rsp *orcache.PublishRsp) {
             if rsp.TTL == 0 { return }
             peer := pf.Find(req.Card.Key.Id())
             if peer == nil { return }
-            if r := peer.PutOrders.Ask(&orcache.PublishReq{rsp.Token, rsp.TTL, req.Card}, nil); r != nil {
+            if r := peer.PublishOrders.Ask(&orcache.PublishReq{rsp.Token, rsp.TTL, req.Card}, nil); r != nil {
                 nrsp := r.(*orcache.PublishRsp) // correct type assumed
                 if nrsp.TTL < rsp.TTL { rsp.TTL = nrsp.TTL }
             }

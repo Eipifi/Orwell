@@ -48,8 +48,8 @@ func commandToChunk(command uint64) butils.Chunk {
     if command == 0x01 { return &Handshake{} }
     if command == 0x81 { return &HandshakeAck{} }
 
-    if command == 0x02 { return &GetReq{} }
-    if command == 0x82 { return &GetRsp{} }
+    if command == 0x02 { return &FetchReq{} }
+    if command == 0x82 { return &FetchRsp{} }
 
     if command == 0x03 { return &PublishReq{} }
     if command == 0x83 { return &PublishRsp{} }
@@ -61,8 +61,8 @@ func chunkToCommand(chunk butils.Chunk) uint64 {
         case *Handshake:        return 0x01
         case *HandshakeAck:     return 0x81
 
-        case *GetReq:           return 0x02
-        case *GetRsp:           return 0x82
+        case *FetchReq:         return 0x02
+        case *FetchRsp:         return 0x82
 
         case *PublishReq:       return 0x03
         case *PublishRsp:       return 0x83
