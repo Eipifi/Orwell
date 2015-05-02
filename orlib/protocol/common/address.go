@@ -3,6 +3,8 @@ import (
     "io"
     "orwell/orlib/butils"
     "net"
+    "strconv"
+    "errors"
 )
 
 type Address struct {
@@ -20,7 +22,13 @@ func (a *Address) Read(r io.Reader) (err error) {
 }
 
 func (a *Address) Write(w io.Writer) (err error) {
+    a.IP = a.IP.To16()
+    if a.IP == nil { return errors.New("Address ip not set") }
     if err = butils.WriteFull(w, a.IP.To16()[:]); err != nil { return }
     if err = butils.WriteUint16(w, a.Port); err != nil { return }
     return butils.WriteUint64(w, a.Nonce)
+}
+
+func (a *Address) String() string {
+    return a.IP.String() + ":" + strconv.FormatUint(uint64(a.Port), 10) + " [nonce:" + strconv.FormatUint(a.Nonce, 16) + "]"
 }
