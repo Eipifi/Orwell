@@ -3,5 +3,9 @@
   "port": 1984,
   "port_is_external": false,
   "try_upnp": true,
-  "nonce": 4815162342
+  "nonce": 4815162342,
+  "bootstrap_nodes": ["172.16.0.158:1984", "172.16.0.159:1984", "172.16.0.160:1984"],
+  "nodes_min": 3,
+  "nodes_max": 20,
+  "clients_max": 60
 }

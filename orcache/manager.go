@@ -56,31 +56,32 @@ func (m *ManagerImpl) Run() error {
     m.address = &common.Address{}
     m.address.Nonce = uint64(m.cfg.GetInt("nonce"))
     if m.cfg.GetString("ip") == "" {
+        // If ip not specified in the configuration
         if m.address.IP = netutils.FindExternalIp(); m.address.IP == nil {
-            panic("External IP not found")
+            // Maybe use local ip upon first established connection?
+            m.log.Fatalln("Failed to fetch external IP address")
         }
     } else {
         m.address.IP = net.ParseIP(m.cfg.GetString("ip"))
     }
-    if m.cfg.GetBool("port_is_external") {
-        m.address.Port = uint16(m.cfg.GetInt("port"))
-    } else {
-        m.address.Port = 0
-    }
+
     // Setup the port
-    var actual_port uint16 = uint16(m.cfg.GetInt("port"))
-    if m.cfg.GetBool("try_upnp") {
-        if upnp_port := netutils.FindExternalUpnpPort(); upnp_port != 0 {
-            actual_port = upnp_port
-        } else {
-            m.log.Println("Failed to negotiate an external UPNP port, using default")
+    m.address.Port = uint16(m.cfg.GetInt("port"))
+    actual_port := m.address.Port
+    if ! m.cfg.GetBool("port_is_external") {
+        m.address.Port = 0
+        if m.cfg.GetBool("try_upnp") {
+            if upnp_port := netutils.FindExternalUpnpPort(); upnp_port != 0 {
+                actual_port = upnp_port
+                m.address.Port = upnp_port
+            } else {
+                m.log.Println("Failed to negotiate an external UPNP port, using default")
+            }
         }
     }
-    var ext_msg string = ""
-    if m.address.IsInternal() {
-        ext_msg = "(port 0 means an externally unreachable NAT address)"
-    }
-    m.log.Println("Advertised address:", m.address, ext_msg)
+
+    // Connect
+    m.log.Println("Advertised address:", m.address)
     m.log.Println("Advertised id:", m.address.Id())
     socket, err := net.Listen("tcp", ":" + strconv.FormatUint(uint64(actual_port), 10))
     m.log.Println("Listening on TCP port", actual_port)
