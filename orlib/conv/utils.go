@@ -21,12 +21,12 @@ func ShakeHands(conn io.ReadWriter, userAgent string, addr *common.Address) (hs 
 func MessageListener(conn io.Reader) <-chan butils.Chunk {
     c := make(chan butils.Chunk)
     go func(){
+        defer close(c)
         for {
             msg := &orcache.Message{}
-            if msg.Read(conn) != nil { break }
+            if msg.Read(conn) != nil { return }
             c <- msg.Chunk
         }
-        close(c)
     }()
     return c
 }
@@ -36,8 +36,8 @@ func MessageSender(conn io.WriteCloser) chan<- butils.Chunk {
     go func(){
         defer conn.Close()
         for {
-            chunk := <- c
-            if chunk == nil { return }
+            chunk, ok := <- c
+            if ! ok { return }
             if orcache.Msg(chunk).Write(conn) != nil { return }
         }
     }()
