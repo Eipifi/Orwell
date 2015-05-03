@@ -23,7 +23,7 @@ func Find(req *orcache.FetchReq, pf PeerFinder) (rsp *orcache.FetchRsp) {
         defer Locker.Unlock(rsp.Token)
         for {
             if rsp.TTL == 0 { return }
-            peer := pf.Find(req.ID)
+            peer := pf.FindPeer(req.ID)
             if peer == nil { return }
             rsp.TTL -= 1
             if r := peer.FetchOrders.Ask(&orcache.FetchReq{rsp.Token, rsp.TTL, req.ID, req.Version}, validator); r != nil {
@@ -47,7 +47,7 @@ func Publish(req *orcache.PublishReq, pf PeerFinder) (rsp *orcache.PublishRsp) {
         defer Locker.Unlock(req.Token)
         for {
             if rsp.TTL == 0 { return }
-            peer := pf.Find(req.Card.Key.Id())
+            peer := pf.FindPeer(req.Card.Key.Id())
             if peer == nil { return }
             if r := peer.PublishOrders.Ask(&orcache.PublishReq{rsp.Token, rsp.TTL, req.Card}, nil); r != nil {
                 nrsp := r.(*orcache.PublishRsp) // correct type assumed

@@ -58,7 +58,7 @@ func (p *Peer) lifecycle() {
         select {
             case msg := <- inbox: // If new message was received
                 if msg == nil { return } // If nil, inbox chan was closed. Peer must close.
-                p.handleMessage(msg) // Else handle message
+                go p.handleMessage(msg) // Else handle message
         }
     }
     return
@@ -84,10 +84,12 @@ func (p *Peer) Send(msg butils.Chunk) {
 
 func (p *Peer) handleMessage(msg butils.Chunk) {
     switch msg := msg.(type) {
-        case *orcache.FetchReq:     go p.Send(Find(msg, p.mgr))
+        case *orcache.FetchReq:     p.Send(Find(msg, p.mgr))
         case *orcache.FetchRsp:     if !p.FetchOrders.Respond(msg) { p.close() }
-        case *orcache.PublishReq:   go p.Send(Publish(msg, p.mgr))
+        case *orcache.PublishReq:   p.Send(Publish(msg, p.mgr))
         case *orcache.PublishRsp:   if !p.PublishOrders.Respond(msg) { p.close() }
+        case *orcache.PeersReq:     p.Send(&orcache.PeersRsp{p.mgr.FindAddresses(p.Hs.Address.Id())}) // FIXME: address may be nil
+        case *orcache.PeersRsp:     p.log.Println(msg)
         default: panic("Unrecognized message type")
     }
 }

@@ -53,6 +53,10 @@ func commandToChunk(command uint64) butils.Chunk {
 
     if command == 0x03 { return &PublishReq{} }
     if command == 0x83 { return &PublishRsp{} }
+
+    if command == 0x04 { return &PeersReq{} }
+    if command == 0x84 { return &PeersRsp{} }
+
     return nil
 }
 
@@ -66,6 +70,9 @@ func chunkToCommand(chunk butils.Chunk) uint64 {
 
         case *PublishReq:       return 0x03
         case *PublishRsp:       return 0x83
+
+        case *PeersReq:         return 0x04
+        case *PeersRsp:         return 0x84
     }
     return 0
 }

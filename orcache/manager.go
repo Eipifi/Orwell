@@ -12,7 +12,7 @@ import (
 )
 
 type PeerFinder interface {
-    Find(*hash.ID) *Peer
+    FindPeer(*hash.ID) *Peer
 }
 
 type Manager interface {
@@ -20,6 +20,7 @@ type Manager interface {
     Join(*Peer)
     Leave(*Peer)
     LocalAddress() *common.Address
+    FindAddresses(*hash.ID) []common.Address
 }
 
 type ManagerImpl struct {
@@ -43,7 +44,11 @@ func (m *ManagerImpl) Leave(peer *Peer) {
     m.log.Println("Left:", peer.Hs)
 }
 
-func (m *ManagerImpl) Find(*hash.ID) *Peer {
+func (m *ManagerImpl) FindPeer(*hash.ID) *Peer {
+    return nil
+}
+
+func (m *ManagerImpl) FindAddresses(*hash.ID) []common.Address {
     return nil
 }
 
