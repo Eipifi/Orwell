@@ -38,9 +38,10 @@ func (a *Address) IsInternal() bool {
     return a.Port == 0
 }
 
-func (a *Address) Id() *hash.ID {
-    if a == nil { return nil }
+func (a *Address) Id() hash.ID {
     buf, err := butils.WriteToBytes(a)
-    if err != nil { return nil }
+    if err != nil {
+        panic(err)
+    }
     return hash.NewId(buf)
 }

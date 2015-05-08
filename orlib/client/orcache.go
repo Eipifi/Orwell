@@ -22,7 +22,7 @@ func ShakeHands(c io.ReadWriter, agent string, address *common.Address, fn HsChe
     return
 }
 
-func Fetch(c io.ReadWriter, id *hash.ID, version uint64) (card *card.Card, err error) {
+func Fetch(c io.ReadWriter, id hash.ID, version uint64) (card *card.Card, err error) {
     token := common.NewRandomToken()
     if err = orcache.WriteMessage(c, &orcache.FetchReq{token, common.MaxTTLValue, id, version}); err != nil { return }
     rsp := &orcache.FetchRsp{}

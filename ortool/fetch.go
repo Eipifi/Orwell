@@ -42,7 +42,7 @@ func (fetchCommand) Main(args []string) (err error) {
     if err = fs.Parse(args); err != nil { return InvalidUsage }
     if len(fs.Args()) != 1 { return InvalidUsage }
 
-    var id *hash.ID
+    var id hash.ID
     if id, err = hash.HexToID(fs.Arg(0)); err != nil { return }
 
     var conn net.Conn

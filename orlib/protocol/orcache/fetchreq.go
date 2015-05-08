@@ -9,7 +9,7 @@ import (
 type FetchReq struct {
     Token common.Token
     TTL common.TTL
-    ID *hash.ID
+    ID hash.ID
     Version uint64
 }
 
@@ -18,7 +18,6 @@ func (*FetchReq) Code() byte { return 0x02 }
 func (f *FetchReq) Read(r io.Reader) (err error) {
     if err = f.Token.Read(r); err != nil { return }
     if err = f.TTL.Read(r); err != nil { return }
-    f.ID = &hash.ID{}
     if err = f.ID.Read(r); err != nil { return }
     f.Version, err = butils.ReadVarUint(r)
     return

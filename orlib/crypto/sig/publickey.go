@@ -49,9 +49,11 @@ func (k *PublicKey) Verify(payload []byte, signature *Signature) error {
     }
 }
 
-func (k *PublicKey) Id() *hash.ID {
+func (k *PublicKey) Id() hash.ID {
     // TODO: cache the computed id
     buf, err := k.WriteBytes()
-    if err != nil { return nil }
+    if err != nil {
+        panic(err)
+    }
     return hash.NewId(buf)
 }

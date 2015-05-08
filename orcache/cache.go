@@ -13,7 +13,7 @@ import (
 var Storage Cache = NewMapCache()
 
 type Cache interface {
-    Get(*hash.ID, uint64) *card.Card
+    Get(hash.ID, uint64) *card.Card
     Put(*card.Card)
 }
 
@@ -27,10 +27,10 @@ func NewMapCache() *MapCache {
     return m
 }
 
-func (c *MapCache) Get(id *hash.ID, version uint64) *card.Card {
-    return c.data[*id]
+func (c *MapCache) Get(id hash.ID, version uint64) *card.Card {
+    return c.data[id]
 }
 
 func (c *MapCache) Put(val *card.Card) {
-    c.data[*val.Key.Id()] = val
+    c.data[val.Key.Id()] = val
 }
