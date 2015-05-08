@@ -32,7 +32,11 @@ func Hash(data []byte) []byte {
     return id[:]
 }
 
-func (id ID) String() string {
+func (id ID) ToString() string {
+    return hex.EncodeToString(id[:])
+}
+
+func (id *ID) String() string {
     return hex.EncodeToString(id[:])
 }
 

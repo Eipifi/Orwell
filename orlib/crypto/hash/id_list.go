@@ -28,7 +28,9 @@ func (s IdList) ClosestNotSmaller(id ID) int {
 }
 
 func (s IdList) Contains(id ID) bool {
-    return Compare(s.Get(s.ClosestNotSmaller(id)), id) == 0
+    n := s.ClosestNotSmaller(id)
+    if n >= s.Len() { return false }
+    return Compare(s.Get(n), id) == 0
 }
 
 func (s IdList) NClosest(id ID, n int) []ID {

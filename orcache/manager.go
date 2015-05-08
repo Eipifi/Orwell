@@ -27,24 +27,38 @@ type ManagerImpl struct {
     log *log.Logger
     address *common.Address
     cfg *jconfig.Config
+    ring *RingMap
 }
 
 func NewManagerImpl() *ManagerImpl {
     m := &ManagerImpl{}
     m.log = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
     m.cfg = jconfig.LoadConfig("/Users/eipifi/Go/src/orwell/config/default.orcache.json") // DEVELOPMENT
+    m.ring = NewRingMap()
     return m
 }
 
 func (m *ManagerImpl) Join(peer *Peer) {
     m.log.Println("Joined:", peer.Hs)
+    if peer.Hs.Address != nil {
+        // FIXME: Ensure no duplicates, check on handshake and watch for concurrency issues
+        m.ring.Put(peer)
+    }
+    m.log.Println(m.ring)
 }
 
 func (m *ManagerImpl) Leave(peer *Peer) {
     m.log.Println("Left:", peer.Hs)
+    if peer.Hs.Address != nil {
+        m.ring.Del(peer)
+    }
 }
 
-func (m *ManagerImpl) FindPeer(hash.ID) *Peer {
+func (m *ManagerImpl) FindPeer(id hash.ID) *Peer {
+    peers := m.ring.Nearest(id, 1)
+    if len(peers) > 0 {
+        return peers[0]
+    }
     return nil
 }
 
@@ -87,7 +101,7 @@ func (m *ManagerImpl) Run() error {
 
     // Connect
     m.log.Println("Advertised address:", m.address)
-    m.log.Println("Advertised id:", m.address.Id())
+    m.log.Println("Advertised id:", m.address.Id().ToString())
     socket, err := net.Listen("tcp", ":" + strconv.FormatUint(uint64(actual_port), 10))
     m.log.Println("Listening on TCP port", actual_port)
     if err != nil { return err }
