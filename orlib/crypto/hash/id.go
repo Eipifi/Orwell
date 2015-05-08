@@ -5,6 +5,7 @@ import (
     "crypto/sha256"
     "encoding/hex"
     "errors"
+    "bytes"
 )
 
 const (
@@ -27,6 +28,10 @@ func NewId(data []byte) *ID {
     return &id
 }
 
+func New(data []byte) ID {
+    return sha256.Sum256(data)
+}
+
 func Hash(data []byte) []byte {
     id := NewId(data)
     return id[:]
@@ -47,4 +52,25 @@ func HexToID(h string) (*ID, error) {
 
 func Equal(id1 *ID, id2 *ID) bool {
     panic("Not implemented")
+}
+
+func Compare(a, b ID) int {
+    return bytes.Compare(a[:], b[:])
+}
+
+func LeftCloser(a, b, c ID) bool {
+    for i := 0; i < ByteLength; i++ {
+        dl, dr := dist(a[i], b[i]), dist(b[i], c[i])
+        if dl < dr { return true }
+        if dl > dr { return false }
+    }
+    return true
+}
+
+func dist(a, b byte) int {
+    diff := int(a) - int(b)
+    if diff < 0 { diff = -diff }
+    ndiff := 256 - diff
+    if diff < ndiff { return diff }
+    return ndiff
 }
