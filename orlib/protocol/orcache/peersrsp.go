@@ -13,6 +13,8 @@ type PeersRsp struct {
     Addresses []common.Address
 }
 
+func (*PeersRsp) Code() byte { return 0x84 }
+
 func (p *PeersRsp) Read(r io.Reader) (err error) {
     num, err := butils.ReadVarUint(r)
     if err != nil { return }

@@ -4,8 +4,8 @@ import (
     "orwell/orlib/crypto/hash"
 )
 
-func GetRspValidator(req *orcache.FetchReq) func(orcache.ChunkWithToken) bool {
-    return func(msg orcache.ChunkWithToken) bool {
+func GetRspValidator(req *orcache.FetchReq) func(orcache.TokenMessage) bool {
+    return func(msg orcache.TokenMessage) bool {
         switch msg := msg.(type) {
             case *orcache.FetchRsp:
                 if msg.Card == nil { return true }

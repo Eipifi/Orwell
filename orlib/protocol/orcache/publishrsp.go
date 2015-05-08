@@ -9,6 +9,8 @@ type PublishRsp struct {
     TTL common.TTL
 }
 
+func (*PublishRsp) Code() byte { return 0x83 }
+
 func (p *PublishRsp) Read(r io.Reader) (err error) {
     if err = p.Token.Read(r); err != nil { return }
     if err = p.TTL.Read(r); err != nil { return }

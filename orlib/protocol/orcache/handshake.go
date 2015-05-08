@@ -13,6 +13,8 @@ type Handshake struct {
     Address *common.Address
 }
 
+func (*Handshake) Code() byte { return 0x01 }
+
 func (m *Handshake) Read(r io.Reader) (err error) {
     if m.Magic, err = butils.ReadUint32(r); err != nil { return }
     if m.Version, err = butils.ReadVarUint(r); err != nil { return }

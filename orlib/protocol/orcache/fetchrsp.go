@@ -12,6 +12,8 @@ type FetchRsp struct {
     Card *card.Card
 }
 
+func (*FetchRsp) Code() byte { return 0x82 }
+
 func (f *FetchRsp) Read(r io.Reader) (err error) {
     if err = f.Token.Read(r); err != nil { return }
     if err = f.TTL.Read(r); err != nil { return }

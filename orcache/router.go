@@ -1,18 +1,17 @@
 package main
 import (
     "orwell/orlib/protocol/orcache"
-    "orwell/orlib/butils"
     "orwell/orlib/protocol/common"
     "sync"
 )
 
 type request struct {
-    msg orcache.ChunkWithToken
-    validator func(orcache.ChunkWithToken) bool
-    sink chan orcache.ChunkWithToken
+    msg orcache.TokenMessage
+    validator func(orcache.TokenMessage) bool
+    sink chan orcache.TokenMessage
 }
 
-func (r *request) complete(msg orcache.ChunkWithToken) {
+func (r *request) complete(msg orcache.TokenMessage) {
     r.sink <- msg
 }
 
@@ -21,18 +20,18 @@ func (r *request) cancel() {
 }
 
 type response struct {
-    msg orcache.ChunkWithToken
+    msg orcache.TokenMessage
     sink chan bool
 }
 
 type RequestRouter struct {
-    sink chan<- butils.Chunk
+    sink chan<- orcache.Message
     orders map[common.Token] *request
     mtx *sync.Mutex
     closed bool
 }
 
-func NewRouter(sink chan<- butils.Chunk) *RequestRouter {
+func NewRouter(sink chan<- orcache.Message) *RequestRouter {
     m := &RequestRouter{}
     m.sink = sink
     m.orders = make(map[common.Token] *request)
@@ -41,13 +40,13 @@ func NewRouter(sink chan<- butils.Chunk) *RequestRouter {
     return m
 }
 
-func (m *RequestRouter) Ask(msg orcache.ChunkWithToken, validator func(orcache.ChunkWithToken) bool) orcache.ChunkWithToken {
-    ord := &request{msg, validator, make(chan orcache.ChunkWithToken)}
+func (m *RequestRouter) Ask(msg orcache.TokenMessage, validator func(orcache.TokenMessage) bool) orcache.TokenMessage {
+    ord := &request{msg, validator, make(chan orcache.TokenMessage)}
     go m.handleOrder(ord)
     return <- ord.sink
 }
 
-func (m *RequestRouter) Respond(msg orcache.ChunkWithToken) bool {
+func (m *RequestRouter) Respond(msg orcache.TokenMessage) bool {
     rsp := &response{msg, make(chan bool)}
     go m.handleResponse(rsp)
     return <- rsp.sink

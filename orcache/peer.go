@@ -5,7 +5,6 @@ import (
     "orwell/orlib/conv"
     "log"
     "os"
-    "orwell/orlib/butils"
     "sync"
 )
 
@@ -16,7 +15,7 @@ type Peer struct {
 
     cn net.Conn
     log *log.Logger
-    out chan<- butils.Chunk
+    out chan<- orcache.Message
     closed bool
     mtx *sync.Mutex
     mgr Manager
@@ -78,11 +77,11 @@ func (p *Peer) close() error {
 }
 
 // Sends the given message to remote peer
-func (p *Peer) Send(msg butils.Chunk) {
+func (p *Peer) Send(msg orcache.Message) {
     p.out <- msg
 }
 
-func (p *Peer) handleMessage(msg butils.Chunk) {
+func (p *Peer) handleMessage(msg orcache.Message) {
     switch msg := msg.(type) {
         case *orcache.FetchReq:     p.Send(Find(msg, p.mgr))
         case *orcache.FetchRsp:     if !p.FetchOrders.Respond(msg) { p.close() }

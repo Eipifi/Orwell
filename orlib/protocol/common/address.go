@@ -39,6 +39,7 @@ func (a *Address) IsInternal() bool {
 }
 
 func (a *Address) Id() *hash.ID {
+    if a == nil { return nil }
     buf, err := butils.WriteToBytes(a)
     if err != nil { return nil }
     return hash.NewId(buf)

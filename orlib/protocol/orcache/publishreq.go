@@ -12,6 +12,8 @@ type PublishReq struct {
     Card *card.Card
 }
 
+func (*PublishReq) Code() byte { return 0x03 }
+
 func (p *PublishReq) Read(r io.Reader) (err error) {
     if err = p.Token.Read(r); err != nil { return }
     if err = p.TTL.Read(r); err != nil { return }

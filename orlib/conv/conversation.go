@@ -2,7 +2,6 @@ package conv
 import (
     "orwell/orlib/protocol/orcache"
     "net"
-    "orwell/orlib/butils"
     "errors"
     "orwell/orlib/protocol/common"
     "orwell/orlib/crypto/hash"
@@ -29,20 +28,16 @@ func CreateTCPConversation(addr string) (*Conversation, error) {
     return CreateConversation(conn), nil
 }
 
-func (c *Conversation) Write(chunk butils.Chunk) error {
-    msg := orcache.Msg(chunk)
-    if msg == nil { return errors.New("Unknown chunk type") }
-    return msg.Write(c.Conn)
+func (c *Conversation) Write(msg orcache.Message) error {
+    return orcache.WriteMessage(c.Conn, msg)
 }
 
-func (c *Conversation) ReadAny() (chunk butils.Chunk, err error) {
-    msg := &orcache.Message{}
-    if err = msg.Read(c.Conn); err != nil { return }
-    return msg.Chunk, nil
+func (c *Conversation) ReadAny() (msg orcache.Message, err error) {
+    return orcache.ReadAnyMessage(c.Conn)
 }
 
-func (c *Conversation) ReadSpecific(chunk butils.Chunk) (err error) {
-    return orcache.Msg(chunk).Read(c.Conn)
+func (c *Conversation) ReadSpecific(msg orcache.Message) (err error) {
+    return orcache.ReadMessage(c.Conn, msg)
 }
 
 func (c *Conversation) DoHandshake(userAgent string, addr *common.Address) (err error) {
