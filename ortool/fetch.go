@@ -2,12 +2,13 @@ package main
 import (
     "flag"
     "orwell/orlib/crypto/hash"
-    "orwell/orlib/conv"
     "orwell/orlib/crypto/card"
     "errors"
     "orwell/orlib/crypto/armor"
     "os"
     "orwell/orlib/butils"
+    "orwell/orlib/client"
+    "net"
 )
 
 type fetchCommand struct {}
@@ -44,13 +45,13 @@ func (fetchCommand) Main(args []string) (err error) {
     var id *hash.ID
     if id, err = hash.HexToID(fs.Arg(0)); err != nil { return }
 
-    var cv *conv.Conversation
-    if cv, err = conv.CreateTCPConversation(*fSrc); err != nil { return }
+    var conn net.Conn
+    if conn, err = net.Dial("tcp", *fSrc); err != nil { return }
 
-    if err = cv.DoHandshake("ortool", nil); err != nil { return }
+    if _, err = client.ShakeHands(conn, "ortool", nil, nil); err != nil { return }
 
     var c *card.Card
-    if c, err = cv.DoGet(id, 0); err != nil { return }
+    if c, err = client.Fetch(conn, id, 0); err != nil { return }
 
     if c == nil {
         return errors.New("Card not found on the server.")

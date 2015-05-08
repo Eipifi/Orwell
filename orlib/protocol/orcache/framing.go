@@ -6,6 +6,9 @@ import (
     "orwell/orlib/protocol/common"
 )
 
+const Magic uint32 = 0xcafebabe
+const Version uint64 = 1
+
 var ErrUnexpectedCode = errors.New("Unexpected message code")
 
 type Message interface {

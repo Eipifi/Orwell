@@ -2,10 +2,11 @@ package main
 import (
     "net"
     "orwell/orlib/protocol/orcache"
-    "orwell/orlib/conv"
     "log"
     "os"
     "sync"
+    "orwell/orlib/client"
+    "io"
 )
 
 type Peer struct {
@@ -36,16 +37,16 @@ func NewPeer(conn net.Conn, mgr Manager) *Peer {
 func (p *Peer) lifecycle() {
     var err error
     // Establish connection by exchanging handshakes
-    if p.Hs, err = conv.ShakeHands(p.cn, "orcache", p.mgr.LocalAddress()); err != nil {
+    if p.Hs, err = client.ShakeHands(p.cn, "orcache", p.mgr.LocalAddress(), nil); err != nil {
         p.log.Println("Handshake exchange failed:", err)
         return
     }
     // Ensure proper finalization
     defer p.close()
     // Start listening on incoming messages (channel will close on socket close / error)
-    inbox := conv.MessageListener(p.cn)
+    inbox := MessageListener(p.cn)
     // Start sending outgoing messages (socket will be closed on chan close / error)
-    p.out = conv.MessageSender(p.cn)
+    p.out = MessageSender(p.cn)
     // Start the FETCH request manager
     p.FetchOrders = NewRouter(p.out)
     // Start the PUBLISH request manager
@@ -91,4 +92,30 @@ func (p *Peer) handleMessage(msg orcache.Message) {
         case *orcache.PeersRsp:     p.log.Println(msg)
         default: panic("Unrecognized message type")
     }
+}
+
+func MessageListener(conn io.Reader) <-chan orcache.Message {
+    c := make(chan orcache.Message)
+    go func(){
+        defer close(c)
+        for {
+            msg, err := orcache.ReadAnyMessage(conn)
+            if err != nil { return }
+            c <- msg
+        }
+    }()
+    return c
+}
+
+func MessageSender(conn io.WriteCloser) chan<- orcache.Message {
+    c := make(chan orcache.Message)
+    go func(){
+        defer conn.Close()
+        for {
+            msg, ok := <- c
+            if ! ok { return }
+            if orcache.WriteMessage(conn, msg) != nil { return }
+        }
+    }()
+    return c
 }

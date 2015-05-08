@@ -5,8 +5,9 @@ import (
     "io"
     "orwell/orlib/crypto/card"
     "orwell/orlib/crypto/armor"
-    "orwell/orlib/conv"
     "orwell/orlib/protocol/common"
+    "orwell/orlib/client"
+    "net"
 )
 
 type publishCommand struct{}
@@ -36,13 +37,13 @@ func (publishCommand) Main(args []string) (err error) {
     c := &card.Card{}
     if err = armor.DecodeFromTo(r, c); err != nil { return }
 
-    var cv *conv.Conversation
-    if cv, err = conv.CreateTCPConversation(*fTg); err != nil { return }
+    var conn net.Conn
+    if conn, err = net.Dial("tcp", *fTg); err != nil { return }
 
-    if err = cv.DoHandshake("ortool", nil); err != nil { return }
+    if _, err = client.ShakeHands(conn, "ortool", nil, nil); err != nil { return }
 
     var ttl common.TTL
-    if ttl, err = cv.DoPut(c); err != nil { return }
+    if ttl, err = client.Publish(conn, c); err != nil { return }
 
     fmt.Println("Published. TTL =", ttl)
     return
