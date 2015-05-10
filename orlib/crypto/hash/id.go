@@ -6,6 +6,7 @@ import (
     "encoding/hex"
     "errors"
     "bytes"
+    "crypto/rand"
 )
 
 const (
@@ -25,6 +26,12 @@ func (i *ID) Write(w io.Writer) error {
 
 func NewId(data []byte) ID {
     return sha256.Sum256(data)
+}
+
+func NewRandomId() ID {
+    id := ID{}
+    id.Read(rand.Reader)
+    return id
 }
 
 func Hash(data []byte) []byte {

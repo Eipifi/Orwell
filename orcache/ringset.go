@@ -16,10 +16,7 @@ func NewRingMap() *RingMap {
 }
 
 func (m *RingMap) Put(peer *Peer) {
-    id := peer.Hs.Address.Id()
-    if m.ring.Contains(id) {
-
-    }
+    id := *peer.Hs.ID
     m.ring = append(m.ring, id)
     m.peers[id] = peer
     sort.Sort(m.ring)
@@ -30,7 +27,7 @@ func (m *RingMap) Contains(id hash.ID) bool {
 }
 
 func (m *RingMap) Del(peer *Peer) {
-    id := peer.Hs.Address.Id()
+    id := *peer.Hs.ID
     if m.Contains(id) {
         n := m.ring.ClosestNotSmaller(id)
         m.ring = append(m.ring[:n], m.ring[n+1:]...)

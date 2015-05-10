@@ -11,9 +11,9 @@ import (
 type HsCheck func(*orcache.Handshake) bool
 var ErrTokenMismatch = errors.New("Token mismatch")
 
-func ShakeHands(c io.ReadWriter, agent string, address *common.Address, fn HsCheck) (hs *orcache.Handshake, err error) {
+func ShakeHands(c io.ReadWriter, agent string, id *hash.ID, port common.Port, fn HsCheck) (hs *orcache.Handshake, err error) {
     hs = &orcache.Handshake{}
-    if err = orcache.WriteMessage(c, &orcache.Handshake{orcache.Magic, orcache.Version, agent, address}); err != nil { return }
+    if err = orcache.WriteMessage(c, &orcache.Handshake{orcache.Magic, orcache.Version, agent, port, id}); err != nil { return }
     if err = orcache.ReadMessage(c, hs); err != nil { return }
     if hs.Magic != orcache.Magic { return nil, errors.New("Magic value mismatch") }
     if fn != nil && !fn(hs) { return nil, errors.New("Handshake rejected") }

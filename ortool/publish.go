@@ -40,7 +40,7 @@ func (publishCommand) Main(args []string) (err error) {
     var conn net.Conn
     if conn, err = net.Dial("tcp", *fTg); err != nil { return }
 
-    if _, err = client.ShakeHands(conn, "ortool", nil, nil); err != nil { return }
+    if _, err = client.ShakeHands(conn, "ortool", nil, common.NoPort, nil); err != nil { return }
 
     var ttl common.TTL
     if ttl, err = client.Publish(conn, c); err != nil { return }

@@ -9,6 +9,7 @@ import (
     "orwell/orlib/butils"
     "orwell/orlib/client"
     "net"
+    "orwell/orlib/protocol/common"
 )
 
 type fetchCommand struct {}
@@ -48,7 +49,7 @@ func (fetchCommand) Main(args []string) (err error) {
     var conn net.Conn
     if conn, err = net.Dial("tcp", *fSrc); err != nil { return }
 
-    if _, err = client.ShakeHands(conn, "ortool", nil, nil); err != nil { return }
+    if _, err = client.ShakeHands(conn, "ortool", nil, common.NoPort, nil); err != nil { return }
 
     var c *card.Card
     if c, err = client.Fetch(conn, id, 0); err != nil { return }

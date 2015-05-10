@@ -4,115 +4,51 @@ import (
     "os"
     "orwell/orlib/crypto/hash"
     "orwell/orlib/protocol/common"
-    "net"
     "stathat.com/c/jconfig"
     "fmt"
-    "strconv"
-    "orwell/orlib/netutils"
+    "orwell/orlib/protocol/orcache"
 )
 
 type PeerFinder interface {
     FindPeer(hash.ID) *Peer
 }
 
-type Manager interface {
-    PeerFinder
-    Join(*Peer)
-    Leave(*Peer)
-    LocalAddress() *common.Address
-    FindAddresses(hash.ID) []common.Address
-}
-
-type ManagerImpl struct {
+type Manager struct {
     log *log.Logger
-    address *common.Address
+    AdvertisedPort common.Port
+    ActualPort common.Port
+    AdvertisedID *hash.ID
     cfg *jconfig.Config
-    ring *RingMap
 }
 
-func NewManagerImpl() *ManagerImpl {
-    m := &ManagerImpl{}
+func NewManager() *Manager {
+    m := &Manager{}
     m.log = log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
     m.cfg = jconfig.LoadConfig("/Users/eipifi/Go/src/orwell/config/default.orcache.json") // DEVELOPMENT
-    m.ring = NewRingMap()
     return m
 }
 
-func (m *ManagerImpl) Join(peer *Peer) {
-    m.log.Println("Joined:", peer.Hs)
-    if peer.Hs.Address != nil {
-        // FIXME: Ensure no duplicates, check on handshake and watch for concurrency issues
-        m.ring.Put(peer)
-    }
-    m.log.Println(m.ring)
+func (m *Manager) Join(peer *Peer) {
+    m.log.Println("Joined", peer.Hs)
 }
 
-func (m *ManagerImpl) Leave(peer *Peer) {
-    m.log.Println("Left:", peer.Hs)
-    if peer.Hs.Address != nil {
-        m.ring.Del(peer)
-    }
+func (m *Manager) Leave(peer *Peer) {
+    m.log.Println("Left", peer.Hs)
 }
 
-func (m *ManagerImpl) FindPeer(id hash.ID) *Peer {
-    peers := m.ring.Nearest(id, 1)
-    if len(peers) > 0 {
-        return peers[0]
-    }
+func (m *Manager) FindPeer(id hash.ID) *Peer {
     return nil
 }
 
-func (m *ManagerImpl) FindAddresses(hash.ID) []common.Address {
+func (m *Manager) CheckHandshake(hs *orcache.Handshake) bool {
+    return true
+}
+
+func (m *Manager) FindAddresses(*hash.ID) []common.Address {
     return nil
-}
-
-func (m *ManagerImpl) LocalAddress() *common.Address {
-    return m.address
-}
-
-func (m *ManagerImpl) Run() error {
-    // Setup the address
-    m.address = &common.Address{}
-    m.address.Nonce = uint64(m.cfg.GetInt("nonce"))
-    if m.cfg.GetString("ip") == "" {
-        // If ip not specified in the configuration
-        if m.address.IP = netutils.FindExternalIp(); m.address.IP == nil {
-            // Maybe use local ip upon first established connection?
-            m.log.Fatalln("Failed to fetch external IP address")
-        }
-    } else {
-        m.address.IP = net.ParseIP(m.cfg.GetString("ip"))
-    }
-
-    // Setup the port
-    m.address.Port = uint16(m.cfg.GetInt("port"))
-    actual_port := m.address.Port
-    if ! m.cfg.GetBool("port_is_external") {
-        m.address.Port = 0
-        if m.cfg.GetBool("try_upnp") {
-            if upnp_port := netutils.FindExternalUpnpPort(); upnp_port != 0 {
-                actual_port = upnp_port
-                m.address.Port = upnp_port
-            } else {
-                m.log.Println("Failed to negotiate an external UPNP port, using default")
-            }
-        }
-    }
-
-    // Connect
-    m.log.Println("Advertised address:", m.address)
-    m.log.Println("Advertised id:", m.address.Id().ToString())
-    socket, err := net.Listen("tcp", ":" + strconv.FormatUint(uint64(actual_port), 10))
-    m.log.Println("Listening on TCP port", actual_port)
-    if err != nil { return err }
-    for {
-        conn, err := socket.Accept()
-        if err != nil { return err }
-        NewPeer(conn, m)
-    }
 }
 
 func main() {
-    m := NewManagerImpl()
+    m := NewManager()
     fmt.Println(m.Run())
 }

@@ -19,10 +19,10 @@ type Peer struct {
     out chan<- orcache.Message
     closed bool
     mtx *sync.Mutex
-    mgr Manager
+    mgr *Manager
 }
 
-func NewPeer(conn net.Conn, mgr Manager) *Peer {
+func NewPeer(conn net.Conn, mgr *Manager) *Peer {
     prefix := conn.RemoteAddr().String() + " "
     peer := &Peer{}
     peer.cn = conn
@@ -37,7 +37,7 @@ func NewPeer(conn net.Conn, mgr Manager) *Peer {
 func (p *Peer) lifecycle() {
     var err error
     // Establish connection by exchanging handshakes
-    if p.Hs, err = client.ShakeHands(p.cn, "orcache", p.mgr.LocalAddress(), nil); err != nil {
+    if p.Hs, err = client.ShakeHands(p.cn, "orcache", p.mgr.AdvertisedID, p.mgr.AdvertisedPort, p.mgr.CheckHandshake); err != nil {
         p.log.Println("Handshake exchange failed:", err)
         return
     }
@@ -88,7 +88,7 @@ func (p *Peer) handleMessage(msg orcache.Message) {
         case *orcache.FetchRsp:     if !p.FetchOrders.Respond(msg) { p.close() }
         case *orcache.PublishReq:   p.Send(Publish(msg, p.mgr))
         case *orcache.PublishRsp:   if !p.PublishOrders.Respond(msg) { p.close() }
-        case *orcache.PeersReq:     p.Send(&orcache.PeersRsp{p.mgr.FindAddresses(p.Hs.Address.Id())}) // FIXME: address may be nil
+        case *orcache.PeersReq:     p.Send(&orcache.PeersRsp{p.mgr.FindAddresses(p.Hs.ID)})
         case *orcache.PeersRsp:     p.log.Println(msg)
         default: panic("Unrecognized message type")
     }
