@@ -9,11 +9,11 @@ import (
 )
 
 const (
-    ByteLength = 32
-    BitLength = ByteLength * 8
+    UINT256_LENGTH_BYTES = 32
+    UINT256_LENGTH_BITS = UINT256_LENGTH_BYTES * 8
 )
 
-type Uint256 [ByteLength]byte
+type Uint256 [UINT256_LENGTH_BYTES]byte
 
 func (i *Uint256) Read(r io.Reader) error {
     return ReadFull(r, i[:])
@@ -37,7 +37,7 @@ func (i Uint256) String() string {
 
 func (i Uint256) Bin() string {
     str := ""
-    for x := 0; x < ByteLength; x += 1 {
+    for x := 0; x < UINT256_LENGTH_BYTES; x += 1 {
         str += fmt.Sprintf("%08s", strconv.FormatUint(uint64(i[x]), 2))
     }
     return str
@@ -59,7 +59,7 @@ func (i *Uint256) SetBit(bit uint8) {
 
 func (i *Uint256) ShiftR(n uint8) {
     for ; n > 0; n -= 1 {
-        for x := ByteLength - 1; x > 0; x -= 1 {
+        for x := UINT256_LENGTH_BYTES - 1; x > 0; x -= 1 {
             i[x] = (i[x] >> 1) | ((i[x-1] & 0x01) << 7)
         }
         i[0] = i[0] >> 1

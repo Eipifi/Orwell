@@ -17,6 +17,10 @@ type LevelDB struct {
 }
 
 var key_HEAD = []byte("head")
+const prefix_HEADER = 'h'   // 0x68
+const prefix_TXN = 't'      // 0x74
+const prefix_BILL = 'b'     // 0x62
+const prefix_TXN_LIST = 'l' // 0x6c
 
 func Open(path string) (s *LevelDB, err error) {
     s = &LevelDB{}
@@ -54,16 +58,36 @@ func (s *LevelDB) FetchHead() (head butils.Uint256, num uint64) {
 func (s *LevelDB) StoreHeader(h *orchain.Header) error {
     buf, err := butils.WriteToBytes(h)
     if err != nil { return err }
-    ensure(s.set(uint256Key('h', h.ID()), buf))
+    ensure(s.set(uint256Key(prefix_HEADER, h.ID()), buf))
     return nil
 }
 
 func (s *LevelDB) FetchHeader(hash butils.Uint256) (h *orchain.Header) {
-    buf := s.get(uint256Key('h', hash))
+    buf := s.get(uint256Key(prefix_HEADER, hash))
     if buf == nil { return nil }
     h = &orchain.Header{}
     ensure(butils.ReadAllInto(h, buf))
     return
+}
+
+func (s *LevelDB) StoreBlockTransactionIDs(bid butils.Uint256, tids []butils.Uint256) {
+    buf := &bytes.Buffer{}
+    for _, tid := range tids {
+        ensure(tid.Write(buf))
+    }
+    s.set(uint256Key(prefix_TXN_LIST, bid), buf.Bytes())
+}
+
+func (s *LevelDB) FetchBlockTransactionIDs(bid butils.Uint256) []butils.Uint256 {
+    buf := s.get(uint256Key(prefix_TXN_LIST, bid))
+    if buf == nil { return nil }
+    num := len(buf) / butils.UINT256_LENGTH_BYTES
+    tids := make([]butils.Uint256, num)
+    r := bytes.NewBuffer(buf)
+    for i := 0; i < num; i += 1 {
+        ensure(tids[i].Read(r))
+    }
+    return tids
 }
 
 func (s *LevelDB) StoreTransaction(t *orchain.Transaction) error {
@@ -71,12 +95,12 @@ func (s *LevelDB) StoreTransaction(t *orchain.Transaction) error {
     if err != nil { return err }
     tid, err := t.ID()
     if err != nil { return err }
-    ensure(s.set(uint256Key('t', tid), buf))
+    ensure(s.set(uint256Key(prefix_TXN, tid), buf))
     return nil
 }
 
 func (s *LevelDB) FetchTransaction(tid butils.Uint256) *orchain.Transaction {
-    buf := s.get(uint256Key('t', tid))
+    buf := s.get(uint256Key(prefix_TXN, tid))
     if buf == nil { return nil }
     t := &orchain.Transaction{}
     ensure(butils.ReadAllInto(t, buf))
@@ -140,7 +164,7 @@ func uint256Key(prefix byte, id butils.Uint256) []byte {
 
 func billKey(number orchain.BillNumber) []byte {
     buf := &bytes.Buffer{}
-    ensure(butils.WriteByte(buf, 'b'))
+    ensure(butils.WriteByte(buf, prefix_BILL))
     ensure(number.Write(buf))
     return buf.Bytes()
 }

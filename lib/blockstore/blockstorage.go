@@ -32,7 +32,7 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
     bid := b.Header.ID()
 
     // Check if block is a child of the current head
-    if butils.Compare(s.Head(), b.Header.Previous) != 0 {
+    if ! butils.Equal(s.Head(), b.Header.Previous) {
         return errors.New("The 'Previous' field of the block dies not match the stored head")
     }
 
@@ -64,13 +64,13 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
             }
             pk_id, err := txn.Proofs[i].PublicKey.ID()
             if err != nil { return err }
-            if butils.Compare(bill.Target, pk_id) != 0 {
+            if ! butils.Equal(bill.Target, pk_id) {
                 return errors.New("The public key does not match the owner of the unspent transaction")
             }
         }
     }
 
-    // Check if no transaction output is spent twice in the block transactions
+    // Check if no bill is spent twice in the block transactions
     // TODO
 
     var fees uint64 = 0
@@ -82,7 +82,7 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
         var output_sum uint64 = 0
         for _, inp := range txn.Inputs {
             bill := s.db.FetchUnspentBill(inp)
-            assert(bill != nil) // we already checked if the inputs are unspent, so it should be ok
+            assert(bill != nil) // we already checked if the input bills are unspent, so it should be ok
             input_sum += bill.Value
         }
         for _, out := range txn.Outputs {
@@ -119,16 +119,20 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
     s.db.StoreHead(bid, s.Length() + 1)
 
     // Insert the transactions
-    for _, txn := range b.Transactions {
-        tid, _ := txn.ID()
+    tids := make([]butils.Uint256, len(b.Transactions))
+    for i, txn := range b.Transactions {
+        tids[i], _ = txn.ID()
         ensure(s.db.StoreTransaction(&txn))
         for _, inp := range txn.Inputs {
             s.db.SpendBill(inp)
         }
         for i, out := range txn.Outputs {
-            s.db.StoreUnspentBill(orchain.BillNumber{tid, uint64(i)}, out)
+            s.db.StoreUnspentBill(orchain.BillNumber{tids[i], uint64(i)}, out)
         }
     }
+
+    // Assign the transactions to a header
+    s.db.StoreBlockTransactionIDs(bid, tids)
 
     return nil
 }
@@ -136,5 +140,9 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
 func (s *BlockStorageImpl) Pop() {
     if s.Length() <= 1 { return } // thou shalt not remove the genesis block
 
-
+    // Remove the header
+    // Remove the txn list
+    // Remove each transaction
+    // For each removed transaction, remove output bills and reset input bills
+    // Update head
 }

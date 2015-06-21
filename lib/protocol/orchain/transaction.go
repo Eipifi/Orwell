@@ -14,8 +14,8 @@ var ErrArrayTooLarge = errors.New("Array too large")
 type Transaction struct {
     TimeLock uint64                     // last acceptable block number
     //NameHash *id.ID                   // hash of the DomainData structure
-    Outputs []Bill                    // list of outputs
-    Inputs []BillNumber                      // list of inputs
+    Outputs []Bill                      // list of outputs
+    Inputs []BillNumber                 // list of inputs
     Proofs []Proof                      // list of public keys and signatures corresponding to inputs
 }
 

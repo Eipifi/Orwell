@@ -22,9 +22,12 @@ func GenesisBlock() (b *orchain.Block) {
         },
     }
     _ = b.ComputeMerkleRoot()
+
+    // Sanity check - verify if the block hash is correct
     bid := b.Header.ID().String()
     if "6f525d28bc52675c89fdc691f933ef17d26af8b34743d2abc2d3ab2271dd5e37" != bid {
         panic("unexpected genesis block hash [" + bid + "]")
     }
+
     return
 }
