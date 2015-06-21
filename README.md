@@ -9,4 +9,4 @@ Key features:
 * eventual consistency for the values, with timestamps for value expiration dates.
 * designed for mobile - value resolving mechanism requires a fixed ~8.55MiB/year, as compared to tens of GiB per year in BTC.  
 
-Part of my MSc thesis about decentralized DNS-like systems. Work in progress.
+Part of my MSc thesis about decentralized DNS-like systems. Work in progress, delivery time: 2015/09/30
