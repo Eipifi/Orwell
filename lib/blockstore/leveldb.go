@@ -70,6 +70,10 @@ func (s *LevelDB) FetchHeader(hash butils.Uint256) (h *orchain.Header) {
     return
 }
 
+func (s *LevelDB) RemoveHeader(hid butils.Uint256) {
+    ensure(s.del(uint256Key(prefix_HEADER, hid)))
+}
+
 func (s *LevelDB) StoreBlockTransactionIDs(bid butils.Uint256, tids []butils.Uint256) {
     buf := &bytes.Buffer{}
     for _, tid := range tids {
@@ -90,6 +94,10 @@ func (s *LevelDB) FetchBlockTransactionIDs(bid butils.Uint256) []butils.Uint256 
     return tids
 }
 
+func (s *LevelDB) RemoveBlockTransactionIDs(bid butils.Uint256) {
+    ensure(s.del(uint256Key(prefix_TXN_LIST, bid)))
+}
+
 func (s *LevelDB) StoreTransaction(t *orchain.Transaction) error {
     buf, err := butils.WriteToBytes(t)
     if err != nil { return err }
@@ -105,6 +113,10 @@ func (s *LevelDB) FetchTransaction(tid butils.Uint256) *orchain.Transaction {
     t := &orchain.Transaction{}
     ensure(butils.ReadAllInto(t, buf))
     return t
+}
+
+func (s *LevelDB) RemoveTransaction(tid butils.Uint256) {
+    ensure(s.del(uint256Key(prefix_TXN, tid)))
 }
 
 func (s *LevelDB) StoreUnspentBill(number orchain.BillNumber, bill orchain.Bill) {

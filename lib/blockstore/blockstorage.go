@@ -18,11 +18,13 @@ func NewBlockStore(storage Database) BlockStorage {
 }
 
 func (s *BlockStorageImpl) Head() butils.Uint256 {
+    // this could be cached
     head, _ := s.db.FetchHead()
     return head
 }
 
 func (s *BlockStorageImpl) Length() uint64 {
+    // this could be cached
     _, l := s.db.FetchHead()
     return l
 }
@@ -138,11 +140,29 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
 }
 
 func (s *BlockStorageImpl) Pop() {
-    if s.Length() <= 1 { return } // thou shalt not remove the genesis block
+    chain_length := s.Length()
+    //if chain_length <= 1 { return } // thou shalt not remove the genesis block
 
-    // Remove the header
-    // Remove the txn list
-    // Remove each transaction
-    // For each removed transaction, remove output bills and reset input bills
-    // Update head
+    bid := s.Head()
+    header := s.db.FetchHeader(bid)
+    assert(header != nil)
+    tids := s.db.FetchBlockTransactionIDs(bid)
+    assert(len(tids) > 0)
+    s.db.RemoveBlockTransactionIDs(bid)
+    s.db.RemoveHeader(bid)
+    s.db.StoreHead(header.Previous, chain_length - 1)
+    for _, tid := range tids {
+        txn := s.db.FetchTransaction(tid)
+        assert(txn != nil)
+        s.db.RemoveTransaction(tid)
+        for i, _ := range txn.Outputs {
+            s.db.SpendBill(orchain.BillNumber{tid, uint64(i)})
+        }
+        for _, inp := range txn.Inputs {
+            // we need to recreate the bill
+            old_txn := s.db.FetchTransaction(inp.Txn)
+            assert(old_txn != nil)
+            s.db.StoreUnspentBill(inp, old_txn.Outputs[inp.Index])
+        }
+    }
 }

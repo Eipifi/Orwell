@@ -17,12 +17,15 @@ type Database interface {
 
     StoreHeader(*orchain.Header) error
     FetchHeader(butils.Uint256) *orchain.Header
+    RemoveHeader(butils.Uint256)
 
     StoreBlockTransactionIDs(butils.Uint256, []butils.Uint256)
     FetchBlockTransactionIDs(butils.Uint256) []butils.Uint256
+    RemoveBlockTransactionIDs(butils.Uint256)
 
     StoreTransaction(*orchain.Transaction) error
     FetchTransaction(butils.Uint256) *orchain.Transaction
+    RemoveTransaction(butils.Uint256)
 
     StoreUnspentBill(orchain.BillNumber, orchain.Bill)
     FetchUnspentBill(orchain.BillNumber) *orchain.Bill
