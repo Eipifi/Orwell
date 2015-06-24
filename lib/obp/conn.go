@@ -40,12 +40,13 @@ func New(socket net.Conn) *Conn {
 
 func (c *Conn) sender() {
     defer c.Close()
+    defer c.log.Println("Closing the sender()")
     for {
         f, ok := <- c.upstream
-        if !ok { return }
+        if ! ok { return }
         err := f.Write(c.socket)
         if err != nil {
-            c.log.Println("Failed to write frame: %s", err)
+            c.log.Printf("Failed to write frame: %s", err)
             return
         }
         c.log.Println("Sent %v", f)
@@ -54,22 +55,23 @@ func (c *Conn) sender() {
 
 func (c *Conn) receiver() {
     defer c.Close()
+    defer c.log.Println("Closing the receiver()")
     for {
         f := &Frame{}
         err := f.Read(c.socket)
         if err != nil {
-            c.log.Println("Failed to read frame: %s", err)
+            c.log.Printf("Failed to read frame: %s", err)
             return
         }
-        c.log.Println("Received %v", f)
+        c.log.Printf("Received %+v", f)
         if f.Context % 2 == 0 {
-            c.dnstream <- f // may fail
+            maybeWrite(c.dnstream, f)
         } else {
             c.mtx.Lock()
             if rc, ok := c.queries[f.Context]; ok {
                 delete(c.queries, f.Context)
                 c.mtx.Unlock()
-                rc <- f // may fail
+                rc <- f
             } else {
                 c.mtx.Unlock()
                 c.log.Println("Received frame does not match any asked question")
@@ -82,18 +84,18 @@ func (c *Conn) receiver() {
 func (c *Conn) Close() {
     if atomic.CompareAndSwapInt32(&(c.closed), 0, 1) {
         c.socket.Close()
-        close(c.upstream)
         close(c.dnstream)
+        close(c.upstream)
         c.mtx.Lock()
         defer c.mtx.Unlock()
         for _, rc := range c.queries {
-            close(rc)
+            rc <- nil
         }
-        c.log.Println("Closed connection")
+        c.log.Println("Closed the connection")
     }
 }
 
-func (c *Conn) Query(request []byte) (response []byte, err error) {
+func (c *Conn) Query(request []byte) ([]byte, error) {
     f := &Frame{}
     f.Context = atomic.AddUint64(&c.context, 2)
     f.Payload = request
@@ -101,7 +103,7 @@ func (c *Conn) Query(request []byte) (response []byte, err error) {
     c.mtx.Lock()
     c.queries[f.Context] = rc
     c.mtx.Unlock()
-    if response, ok := <- rc; ok {
+    if response := <- rc; response != nil {
         return response.Payload, nil
     } else {
         return nil, ErrSocketClosed
@@ -113,11 +115,17 @@ func (c *Conn) Handle(handler Handler) error {
         if response, err := handler(f.Payload); err == nil {
             f.Context += 1
             f.Payload = response
-            c.upstream <- f // may fail
+            maybeWrite(c.upstream, f)
             return nil
         } else {
             c.Close()
             return err
         }
     } else { return ErrSocketClosed }
+}
+
+// HACK - we need a way to *maybe* write, and fail silently if the channel is closed
+func maybeWrite(c chan *Frame, f *Frame) {
+    defer func() { recover() }()
+    c <- f
 }
