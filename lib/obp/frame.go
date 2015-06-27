@@ -4,6 +4,8 @@ import (
     "io"
 )
 
+// TODO: check frame size
+
 type Frame struct {
     Context uint64
     Payload []byte

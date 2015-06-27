@@ -14,18 +14,21 @@ type Peer struct {
     hs *orchain.HandshakeReq
 }
 
-func HandleConnection(socket net.Conn) (err error) {
-    hs := &orchain.HandshakeReq{}
+func Connect(socket net.Conn) {
+    var err error
     p := &Peer{}
     p.log = logging.GetLogger(socket.RemoteAddr().String())
-    if p.conn, err = orchain.Connect(socket, hs, nil); err != nil {
-        p.log.Printf("Error: %v", err)
+    if p.conn, err = orchain.Connect(socket, GenerateHandshake(), p.verifyHandshake); err != nil {
+        p.conn.Close()
+        p.log.Println(err)
         return
     }
+    PeerJoined(p, p.hs)
     defer p.conn.Close()
+    defer PeerLeft(p)
     for {
         if err = p.conn.Handle(p.handleRequest); err != nil {
-            p.log.Printf("Error: %v", err)
+            p.log.Println(err)
             return
         }
     }

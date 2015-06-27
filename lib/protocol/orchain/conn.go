@@ -50,8 +50,8 @@ func Connect(socket net.Conn, hs_local *HandshakeReq, v HsVerifier) (conn *obp.M
         rsp, err := conn.Query(hs_local)
         if err != nil { return err }
         _, ok := rsp.(*HandshakeRsp)
-        if ! ok { return nil }
-        return errors.New("Unexpected response type")
+        if ! ok { return errors.New("Unexpected response type") }
+        return nil
     }
 
     // Run both routines

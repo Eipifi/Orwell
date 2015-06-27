@@ -18,6 +18,7 @@ func (m *HandshakeReq) Read(r io.Reader) (err error) {
     if m.Magic, err = butils.ReadUint32(r); err != nil { return }
     var num uint64
     if num, err = butils.ReadVarUint(r); err != nil { return }
+    m.Fields = make(map[string] string)
     for i := 0; i < int(num); i += 1 {
         var k, v string
         if k, err = butils.ReadString(r); err != nil { return }

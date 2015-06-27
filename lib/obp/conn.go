@@ -68,13 +68,13 @@ func (c *Conn) receiver() {
             maybeWrite(c.dnstream, f)
         } else {
             c.mtx.Lock()
-            if rc, ok := c.queries[f.Context]; ok {
-                delete(c.queries, f.Context)
+            if rc, ok := c.queries[f.Context-1]; ok {
+                delete(c.queries, f.Context-1)
                 c.mtx.Unlock()
                 rc <- f
             } else {
                 c.mtx.Unlock()
-                c.log.Println("Received frame does not match any asked question")
+                c.log.Println("Received response frame does not match any sent request")
                 return
             }
         }
@@ -103,6 +103,7 @@ func (c *Conn) Query(request []byte) ([]byte, error) {
     c.mtx.Lock()
     c.queries[f.Context] = rc
     c.mtx.Unlock()
+    maybeWrite(c.upstream, f)
     if response := <- rc; response != nil {
         return response.Payload, nil
     } else {
