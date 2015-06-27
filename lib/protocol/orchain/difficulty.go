@@ -2,12 +2,16 @@ package orchain
 import (
     "bytes"
     "orwell/lib/butils"
+    "math"
 )
 
 /*
     Target(x) = 2^((65536-x)/256)
     Table[IntegerString[IntegerPart[2^((65536 - x)/256)], 16, 64], {x, 0, 65536}]
 */
+
+const BLOCKS_PER_DIFFICULTY_CHANGE = 1024
+const SECONDS_PER_BLOCK = 600
 
 var precomputed_target0 =
     "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"  // actually the target is 2^256
@@ -294,4 +298,47 @@ func HashMeetsTarget(hash, target butils.Uint256) bool {
 
 func HashMeetsDifficulty(h butils.Uint256, d uint16) bool {
     return HashMeetsTarget(h, DifficultyToTarget(d))
+}
+
+// Calculates how should the difficulty change after a given time interval
+//
+// The difficulty should be recalculated for each block number divisible by 1024 (0, 1024, 2048, 3072, etc).
+//
+// When creating a block with updated difficulty, the time_delta to be used should be equal to the timestamp
+// of the block (currently being created) minus the timestamp 1024 blocks ago.
+func DifficultyDeltaForTimeDifference(time_delta uint64) int16 {
+
+    var seconds_expected = BLOCKS_PER_DIFFICULTY_CHANGE * SECONDS_PER_BLOCK
+    var seconds_elapsed = time_delta
+
+    var ratio float64
+    if seconds_elapsed == 0 {
+        ratio = 2
+    } else {
+        ratio = float64(seconds_expected) / float64(seconds_elapsed)
+        if ratio < 0.5 { ratio = 0.5 }
+        if ratio > 2 { ratio = 2 }
+    }
+
+    result := 256 * math.Log2(ratio)
+
+    return int16(math.Floor(result))
+}
+
+func ApplyDifficultyDelta(difficulty uint16, delta int16) uint16 {
+    if delta >= 0 {
+        abs := uint16(delta)
+        if abs < 65535 - difficulty {
+            return difficulty + abs
+        } else {
+            return 65535
+        }
+    } else {
+        abs := uint16(-delta)
+        if difficulty > abs {
+            return difficulty - abs
+        } else {
+            return 0
+        }
+    }
 }

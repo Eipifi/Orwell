@@ -17,10 +17,11 @@ type LevelDB struct {
 }
 
 var key_HEAD = []byte("head")
-const prefix_HEADER = 'h'   // 0x68
-const prefix_TXN = 't'      // 0x74
-const prefix_BILL = 'b'     // 0x62
-const prefix_TXN_LIST = 'l' // 0x6c
+const prefix_HEADER = 'h'           // 0x68
+const prefix_TXN = 't'              // 0x74
+const prefix_BILL = 'b'             // 0x62
+const prefix_TXN_LIST = 'l'         // 0x6c
+const prefix_HEADER_NUM = 'n'       // 0x6e
 
 func Open(path string) (s *LevelDB, err error) {
     s = &LevelDB{}
@@ -55,23 +56,43 @@ func (s *LevelDB) FetchHead() (head butils.Uint256, num uint64) {
     return
 }
 
-func (s *LevelDB) StoreHeader(h *orchain.Header) error {
-    buf, err := butils.WriteToBytes(h)
-    if err != nil { return err }
-    ensure(s.set(uint256Key(prefix_HEADER, h.ID()), buf))
+func (s *LevelDB) StoreHeader(h *orchain.Header, num uint64) error {
+    buf := &bytes.Buffer{}
+    hid := h.ID()
+    ensure(butils.WriteUint64(buf, num))
+    if err := h.Write(buf); err != nil { return err }
+    ensure(s.set(uint256Key(prefix_HEADER, hid), buf.Bytes()))
+    ensure(s.set(uint64Key(prefix_HEADER_NUM, num), hid[:]))
     return nil
 }
 
 func (s *LevelDB) FetchHeader(hash butils.Uint256) (h *orchain.Header) {
-    buf := s.get(uint256Key(prefix_HEADER, hash))
-    if buf == nil { return nil }
+    data := s.get(uint256Key(prefix_HEADER, hash))
+    if data == nil { return nil }
+    buf := bytes.NewBuffer(data)
+    _, err := butils.ReadUint64(buf)
+    ensure(err)
     h = &orchain.Header{}
-    ensure(butils.ReadAllInto(h, buf))
+    ensure(h.Read(buf))
     return
 }
 
+func (s *LevelDB) FetchHeaderByNum(num uint64) (h *orchain.Header) {
+    data := s.get(uint64Key(prefix_HEADER_NUM, num))
+    assert(data != nil)
+    hid := butils.Uint256{}
+    ensure(butils.ReadAllInto(&hid, data))
+    return s.FetchHeader(hid)
+}
+
 func (s *LevelDB) RemoveHeader(hid butils.Uint256) {
+    data := s.get(uint256Key(prefix_HEADER, hid))
+    assert(data != nil)
+    buf := bytes.NewBuffer(data)
+    num, err := butils.ReadUint64(buf)
+    ensure(err)
     ensure(s.del(uint256Key(prefix_HEADER, hid)))
+    ensure(s.del(uint64Key(prefix_HEADER_NUM, num)))
 }
 
 func (s *LevelDB) StoreBlockTransactionIDs(bid butils.Uint256, tids []butils.Uint256) {
@@ -171,6 +192,13 @@ func uint256Key(prefix byte, id butils.Uint256) []byte {
     key := &bytes.Buffer{}
     ensure(butils.WriteByte(key, prefix))
     ensure(butils.WriteFull(key, id[:]))
+    return key.Bytes()
+}
+
+func uint64Key(prefix byte, num uint64) []byte {
+    key := &bytes.Buffer{}
+    ensure(butils.WriteByte(key, prefix))
+    ensure(butils.WriteUint64(key, num))
     return key.Bytes()
 }
 

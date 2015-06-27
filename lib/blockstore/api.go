@@ -15,8 +15,9 @@ type Database interface {
     StoreHead(butils.Uint256, uint64)
     FetchHead() (butils.Uint256, uint64)
 
-    StoreHeader(*orchain.Header) error
+    StoreHeader(*orchain.Header, uint64) error
     FetchHeader(butils.Uint256) *orchain.Header
+    FetchHeaderByNum(uint64) *orchain.Header
     RemoveHeader(butils.Uint256)
 
     StoreBlockTransactionIDs(butils.Uint256, []butils.Uint256)

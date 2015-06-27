@@ -38,16 +38,36 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
         return errors.New("The 'Previous' field of the block dies not match the stored head")
     }
 
+    // Check if the difficulty value is correct
+    if s.Length() % orchain.BLOCKS_PER_DIFFICULTY_CHANGE == 0 {
+        if s.Length() != 0 {
+            // the block needs a recalculated difficulty
+            var time_difference = b.Header.Timestamp - s.db.FetchHeaderByNum(s.Length() - orchain.BLOCKS_PER_DIFFICULTY_CHANGE).Timestamp
+            difficulty_delta := orchain.DifficultyDeltaForTimeDifference(time_difference)
+            previous_header := s.db.FetchHeader(s.Head())
+            if orchain.ApplyDifficultyDelta(previous_header.Difficulty, difficulty_delta) != b.Header.Difficulty {
+                return errors.New("The new difficulty is not computed correctly")
+            }
+        }
+    } else {
+        previous_header := s.db.FetchHeader(s.Head())
+        if b.Header.Difficulty != previous_header.Difficulty {
+            return errors.New("This block difficulty must be the same as the previous one")
+        }
+    }
+
     // Check if the block hash meets the specified difficulty
     if ! orchain.HashMeetsDifficulty(bid, b.Header.Difficulty) {
         return errors.New("Block hash does not meet the specified difficulty")
     }
 
-    // Check if the difficulty value is correct
-    // TODO: Verify difficulty
-
     // Check if the timestamp is correct
-    // TODO: Verify timestamp
+    if s.Length() > 0 {
+        previous_header := s.db.FetchHeader(s.Head())
+        if b.Header.Timestamp < previous_header.Timestamp {
+            return errors.New("Block timestamp is smaller than the previous one")
+        }
+    }
 
     // Check if the Merkle root matches (and also if there is at least one transaction)
     if err = b.CheckMerkleRoot(); err != nil { return }
@@ -58,12 +78,17 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
     }
 
     // Check if input bills are unspent and if the spend proofs are correct
+    to_spend := make(map[orchain.BillNumber] bool)
     for _, txn := range b.Transactions {
         for i, inp := range txn.Inputs {
             bill := s.db.FetchUnspentBill(inp)
             if bill == nil {
                 return errors.New("Input bill is already spent or does not exist")
             }
+            if _, ok := to_spend[inp]; ok {
+                return errors.New("Two transactions in a block spend the same bill")
+            }
+            to_spend[inp] = true
             pk_id, err := txn.Proofs[i].PublicKey.ID()
             if err != nil { return err }
             if ! butils.Equal(bill.Target, pk_id) {
@@ -71,10 +96,6 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
             }
         }
     }
-
-    // Check if no bill is spent twice in the block transactions
-    // TODO
-
     var fees uint64 = 0
     // Check if all transactions (except the first) have a legal input/output balance
     // TODO verify if we do not get any uint64 overflows here
@@ -115,7 +136,7 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
     // All checks passed, now save the block
 
     // Insert the block
-    ensure(s.db.StoreHeader(&b.Header))
+    ensure(s.db.StoreHeader(&b.Header, s.Length()))
 
     // Update the head
     s.db.StoreHead(bid, s.Length() + 1)
