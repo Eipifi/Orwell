@@ -27,10 +27,10 @@ var (
 )
 const (
     prefix_H = 'h'
-    prefix_N = 'n'
-    prefix_L = 'l'
     prefix_T = 't'
     prefix_B = 'b'
+    prefix_N = 'n'
+    prefix_L = 'l'
 )
 
 type LevelDB struct {

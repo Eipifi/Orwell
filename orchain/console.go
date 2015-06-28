@@ -14,6 +14,7 @@ var commands = map[string] Command {
     "connections": cmdConnections,
     "connect": cmdConnect,
     "stats": cmdStats,
+    "mine": cmdMiner,
 }
 
 func runConsole() {
@@ -57,6 +58,13 @@ func cmdConnect(args []string) error {
 func cmdStats(args []string) error {
     fmt.Printf("# of blocks: %v\n", Storage.Length())
     fmt.Printf("last block: %v\n", Storage.Head())
+    fmt.Printf("difficulty: %v\n", Storage.GetHeaderByID(Storage.Head()).Difficulty)
+    return nil
+}
+
+func cmdMiner(args []string) error {
+    go MinerSup.Run()
+    fmt.Println("Started mining")
     return nil
 }
 

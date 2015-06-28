@@ -9,6 +9,9 @@ type BlockStorage interface {
     Pop()
     Length() uint64
     Head() butils.Uint256
+    GetHeaderByID(butils.Uint256) *orchain.Header
+    GetHeaderByNum(uint64) *orchain.Header
+    //GetBill(orchain.BillNumber) *orchain.Bill
 }
 
 // This database is responsible for keeping the storage in consistent state, with atomic updates.

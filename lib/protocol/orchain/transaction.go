@@ -12,7 +12,6 @@ const TXN_MAX_IN uint64 = 128
 var ErrArrayTooLarge = errors.New("Array too large")
 
 type Transaction struct {
-    TimeLock uint64                     // last acceptable block number
     //NameHash *id.ID                   // hash of the DomainData structure
     Outputs []Bill                      // list of outputs
     Inputs []BillNumber                 // list of inputs
@@ -20,7 +19,6 @@ type Transaction struct {
 }
 
 func (t *Transaction) Read(r io.Reader) (err error) {
-    if t.TimeLock, err = butils.ReadUint64(r); err != nil { return }
     var num uint64
 
     if num, err = butils.ReadVarUint(r); err != nil { return }
@@ -45,7 +43,6 @@ func (t *Transaction) Read(r io.Reader) (err error) {
 }
 
 func (t *Transaction) WriteHead(w io.Writer) (err error) {
-    if err = butils.WriteUint64(w, t.TimeLock); err != nil { return }
 
     num := uint64(len(t.Outputs))
     if num > TXN_MAX_OUT { return ErrArrayTooLarge }

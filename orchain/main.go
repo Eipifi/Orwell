@@ -5,9 +5,12 @@ import (
     "fmt"
     "orwell/lib/blockstore"
     "strconv"
+    "orwell/lib/miner"
+    "orwell/lib/butils"
 )
 
 var Storage blockstore.BlockStorage
+var MinerSup *miner.MiningSupervisor
 
 func main() {
     var port uint16 = 1984
@@ -35,6 +38,9 @@ func main() {
         return
     }
     Storage = blockstore.NewBlockStore(db)
+
+    // Start the mining supervisor
+    MinerSup = miner.NewSupervisor(butils.Uint256{}, Storage)
 
     go runServer(port)
     runConsole()

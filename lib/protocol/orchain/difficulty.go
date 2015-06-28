@@ -10,7 +10,7 @@ import (
     Table[IntegerString[IntegerPart[2^((65536 - x)/256)], 16, 64], {x, 0, 65536}]
 */
 
-const BLOCKS_PER_DIFFICULTY_CHANGE = 1024
+const BLOCKS_PER_DIFFICULTY_CHANGE = 32
 const SECONDS_PER_BLOCK = 600
 
 var precomputed_target0 =

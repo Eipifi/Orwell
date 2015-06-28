@@ -25,6 +25,14 @@ func (s *BlockStorageImpl) Length() uint64 {
     return s.db.Length()
 }
 
+func (s *BlockStorageImpl) GetHeaderByID(id butils.Uint256) *orchain.Header {
+    return s.db.GetHeaderByID(id)
+}
+
+func (s *BlockStorageImpl) GetHeaderByNum(num uint64) *orchain.Header {
+    return s.db.GetHeaderByNum(num)
+}
+
 func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
     // Calculate the block id
     bid := b.Header.ID()
@@ -35,21 +43,8 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
     }
 
     // Check if the difficulty value is correct
-    if s.Length() % orchain.BLOCKS_PER_DIFFICULTY_CHANGE == 0 {
-        if s.Length() != 0 {
-            // the block needs a recalculated difficulty
-            var time_difference = b.Header.Timestamp - s.db.GetHeaderByNum(s.Length() - orchain.BLOCKS_PER_DIFFICULTY_CHANGE).Timestamp
-            difficulty_delta := orchain.DifficultyDeltaForTimeDifference(time_difference)
-            previous_header := s.db.GetHeaderByID(s.Head())
-            if orchain.ApplyDifficultyDelta(previous_header.Difficulty, difficulty_delta) != b.Header.Difficulty {
-                return errors.New("The new difficulty is not computed correctly")
-            }
-        }
-    } else {
-        previous_header := s.db.GetHeaderByID(s.Head())
-        if b.Header.Difficulty != previous_header.Difficulty {
-            return errors.New("This block difficulty must be the same as the previous one")
-        }
+    if ComputeDifficulty(s.Length(), b.Header.Timestamp, s) != b.Header.Difficulty {
+        return errors.New("Invalid difficulty value")
     }
 
     // Check if the block hash meets the specified difficulty
