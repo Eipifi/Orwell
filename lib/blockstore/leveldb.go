@@ -1,27 +1,43 @@
 package blockstore
 import (
     "code.google.com/p/leveldb-go/leveldb"
-    "github.com/mitchellh/go-homedir"
-    "orwell/lib/protocol/orchain"
-    "bytes"
-    "orwell/lib/butils"
     "log"
     "orwell/lib/logging"
+    "github.com/mitchellh/go-homedir"
     "code.google.com/p/leveldb-go/leveldb/db"
-    "errors"
+    "orwell/lib/butils"
+    "orwell/lib/protocol/orchain"
+    "bytes"
+    "io"
+)
+
+/*
+    Database structure:
+
+    "head"                      : <last block number> <last block ID>
+    "h" <ID>                    : <Header>
+    "t" <ID>                    : <Transaction>
+    "b" <BillNumber>            : <Bill>
+    "l" <ID>                    : [<ID>]
+    "n" <uint64>                : <ID>
+
+*/
+var (
+    key_HEAD = []byte("head")
+)
+const (
+    prefix_H = 'h'
+    prefix_N = 'n'
+    prefix_L = 'l'
+    prefix_T = 't'
+    prefix_B = 'b'
 )
 
 type LevelDB struct {
     db *leveldb.DB
     log *log.Logger
+    batch leveldb.Batch
 }
-
-var key_HEAD = []byte("head")
-const prefix_HEADER = 'h'           // 0x68
-const prefix_TXN = 't'              // 0x74
-const prefix_BILL = 'b'             // 0x62
-const prefix_TXN_LIST = 'l'         // 0x6c
-const prefix_HEADER_NUM = 'n'       // 0x6e
 
 func Open(path string) (s *LevelDB, err error) {
     s = &LevelDB{}
@@ -31,162 +47,201 @@ func Open(path string) (s *LevelDB, err error) {
     // Attempt opening a database
     if s.db, err = leveldb.Open(path, nil); err != nil { return }
     // Initialize database if necessary
-    if s.get(key_HEAD) == nil {
-        s.StoreHead(butils.Uint256{}, 0)
+    if _, err := s.get(key_HEAD); err == db.ErrNotFound {
+        s.write(key_HEAD, &head_data{})
+        ensure(s.flush())
     }
     return
 }
 
-func (s *LevelDB) StoreHead(head butils.Uint256, num uint64) {
-    buf := &bytes.Buffer{}
-    ensure(head.Write(buf))
-    ensure(butils.WriteUint64(buf, num))
-    ensure(s.set(key_HEAD, buf.Bytes()))
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-func (s *LevelDB) FetchHead() (head butils.Uint256, num uint64) {
-    buf := s.get(key_HEAD)
-    if buf == nil {
-        panic(errors.New("No head entry"))
+func (s *LevelDB) PutBlock(b *orchain.Block) error {
+    s.batch = leveldb.Batch{}
+    hd := &head_data{}
+    hd.Num = s.Length() + 1
+    hd.ID = b.Header.ID()
+    ensure(s.write(key_HEAD, hd))
+    if err := s.write(uint256Key(prefix_H, hd.ID), &b.Header); err != nil { return err }
+    s.write(uint64Key(prefix_N, s.Length()), &hd.ID)
+
+    // Insert the transactions
+    buf := &bytes.Buffer{}
+    for _, txn := range b.Transactions {
+        tid, err := txn.ID()
+        if err != nil { return err }
+        tid.Write(buf)
+        if err := s.write(uint256Key(prefix_T, tid), &txn); err != nil { return err }
+        for _, inp := range txn.Inputs {
+            s.del(billKey(inp))
+        }
+        for i, out := range txn.Outputs {
+            if err := s.write(billKey(orchain.BillNumber{tid, uint64(i)}), &out); err != nil { return err }
+        }
     }
-    r := bytes.NewBuffer(buf)
-    ensure(head.Read(r))
-    num, err := butils.ReadUint64(r)
-    ensure(err)
-    return
+    // Assign the transactions to a header
+    s.set(uint256Key(prefix_L, hd.ID), buf.Bytes())
+
+    return s.flush()
 }
 
-func (s *LevelDB) StoreHeader(h *orchain.Header, num uint64) error {
-    buf := &bytes.Buffer{}
+func (s *LevelDB) PopBlock() error {
+    s.batch = leveldb.Batch{}
+    h := s.GetHeaderByID(s.Head())
     hid := h.ID()
-    ensure(butils.WriteUint64(buf, num))
-    if err := h.Write(buf); err != nil { return err }
-    ensure(s.set(uint256Key(prefix_HEADER, hid), buf.Bytes()))
-    ensure(s.set(uint64Key(prefix_HEADER_NUM, num), hid[:]))
-    return nil
+    hd := &head_data{}
+    hd.Num = s.Length() - 1
+    hd.ID = h.Previous
+    ensure(s.write(key_HEAD, hd))
+    s.del(uint256Key(prefix_H, hid))
+    s.del(uint64Key(prefix_N, hd.Num))
+
+    for _, tid := range s.GetTransactions(hid) {
+        txn := s.GetTransaction(tid)
+        s.del(uint256Key(prefix_T, tid))
+        for _, inp := range txn.Inputs {
+            referred_txn := s.GetTransaction(inp.Txn)
+            s.write(billKey(inp), &referred_txn.Outputs[inp.Index])
+        }
+        for i, _ := range txn.Outputs {
+            s.del(billKey(orchain.BillNumber{tid, uint64(i)}))
+        }
+    }
+    s.del(uint256Key(prefix_L, hid))
+    return s.flush()
 }
 
-func (s *LevelDB) FetchHeader(hash butils.Uint256) (h *orchain.Header) {
-    data := s.get(uint256Key(prefix_HEADER, hash))
-    if data == nil { return nil }
-    buf := bytes.NewBuffer(data)
-    _, err := butils.ReadUint64(buf)
-    ensure(err)
-    h = &orchain.Header{}
-    ensure(h.Read(buf))
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+type head_data struct {
+    Num uint64
+    ID butils.Uint256
+}
+
+func (h *head_data) Read(r io.Reader) (err error) {
+    if h.Num, err = butils.ReadUint64(r); err != nil { return }
+    if err = h.ID.Read(r); err != nil { return }
     return
 }
 
-func (s *LevelDB) FetchHeaderByNum(num uint64) (h *orchain.Header) {
-    data := s.get(uint64Key(prefix_HEADER_NUM, num))
-    assert(data != nil)
-    hid := butils.Uint256{}
-    ensure(butils.ReadAllInto(&hid, data))
-    return s.FetchHeader(hid)
+func (h *head_data) Write(w io.Writer) (err error) {
+    if err = butils.WriteUint64(w, h.Num); err != nil { return }
+    if err = h.ID.Write(w); err != nil { return }
+    return
 }
 
-func (s *LevelDB) RemoveHeader(hid butils.Uint256) {
-    data := s.get(uint256Key(prefix_HEADER, hid))
-    assert(data != nil)
-    buf := bytes.NewBuffer(data)
-    num, err := butils.ReadUint64(buf)
+func (s *LevelDB) getHead() (h *head_data) {
+    h = &head_data{}
+    ensure(s.read(key_HEAD, h))
+    return
+}
+
+func (s *LevelDB) Length() uint64 {
+    h := s.getHead()
+    return h.Num
+}
+
+func (s *LevelDB) Head() butils.Uint256 {
+    h := s.getHead()
+    return h.ID
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func (s *LevelDB) GetHeaderByID(id butils.Uint256) (h *orchain.Header) {
+    h = &orchain.Header{}
+    err := s.read(uint256Key(prefix_H, id), h)
+    if err == nil { return }
+    if err == db.ErrNotFound { return nil }
+    panic(err)
+}
+
+func (s *LevelDB) GetHeaderByNum(num uint64) (h *orchain.Header) {
+    id := butils.Uint256{}
+    err := s.read(uint64Key(prefix_N, num), &id)
+    if err == nil { return s.GetHeaderByID(id) }
+    if err == db.ErrNotFound { return nil }
+    panic(err)
+}
+
+func (s *LevelDB) GetTransaction(id butils.Uint256) (t *orchain.Transaction) {
+    t = &orchain.Transaction{}
+    err := s.read(uint256Key(prefix_T, id), t)
+    if err == nil { return }
+    if err == db.ErrNotFound { return nil }
+    panic(err)
+}
+
+func (s *LevelDB) GetBill(number orchain.BillNumber) (b *orchain.Bill) {
+    b = &orchain.Bill{}
+    err := s.read(billKey(number), b)
+    if err == nil { return }
+    if err == db.ErrNotFound { return nil }
+    panic(err)
+}
+
+func (s *LevelDB) GetTransactions(id butils.Uint256) []butils.Uint256 {
+    data, err := s.get(uint256Key(prefix_L, id))
+    if err == db.ErrNotFound { return nil }
     ensure(err)
-    ensure(s.del(uint256Key(prefix_HEADER, hid)))
-    ensure(s.del(uint64Key(prefix_HEADER_NUM, num)))
-}
-
-func (s *LevelDB) StoreBlockTransactionIDs(bid butils.Uint256, tids []butils.Uint256) {
-    buf := &bytes.Buffer{}
-    for _, tid := range tids {
-        ensure(tid.Write(buf))
-    }
-    s.set(uint256Key(prefix_TXN_LIST, bid), buf.Bytes())
-}
-
-func (s *LevelDB) FetchBlockTransactionIDs(bid butils.Uint256) []butils.Uint256 {
-    buf := s.get(uint256Key(prefix_TXN_LIST, bid))
-    if buf == nil { return nil }
-    num := len(buf) / butils.UINT256_LENGTH_BYTES
-    tids := make([]butils.Uint256, num)
-    r := bytes.NewBuffer(buf)
+    r := bytes.NewBuffer(data)
+    num := len(data) / butils.UINT256_LENGTH_BYTES
+    res := make([]butils.Uint256, int(num))
     for i := 0; i < num; i += 1 {
-        ensure(tids[i].Read(r))
+        ensure(res[i].Read(r))
     }
-    return tids
+    return res
 }
 
-func (s *LevelDB) RemoveBlockTransactionIDs(bid butils.Uint256) {
-    ensure(s.del(uint256Key(prefix_TXN_LIST, bid)))
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Reads the given key, and tries to unpack it into the given readable structure
+func (s *LevelDB) read(key []byte, r butils.Readable) error {
+    buf, err := s.get(key)
+    if err != nil { return err }
+    return butils.ReadAllInto(r, buf)
 }
 
-func (s *LevelDB) StoreTransaction(t *orchain.Transaction) error {
-    buf, err := butils.WriteToBytes(t)
+// Writes the given writable structure to a given key
+func (s *LevelDB) write(key []byte, w butils.Writable) error {
+    buf, err := butils.WriteToBytes(w)
     if err != nil { return err }
-    tid, err := t.ID()
-    if err != nil { return err }
-    ensure(s.set(uint256Key(prefix_TXN, tid), buf))
+    s.set(key, buf)
     return nil
 }
 
-func (s *LevelDB) FetchTransaction(tid butils.Uint256) *orchain.Transaction {
-    buf := s.get(uint256Key(prefix_TXN, tid))
-    if buf == nil { return nil }
-    t := &orchain.Transaction{}
-    ensure(butils.ReadAllInto(t, buf))
-    return t
+// Returns the raw value associated with the key, if any
+func (s *LevelDB) get(key []byte) ([]byte, error) {
+    return s.db.Get(key, nil)
 }
 
-func (s *LevelDB) RemoveTransaction(tid butils.Uint256) {
-    ensure(s.del(uint256Key(prefix_TXN, tid)))
+// Writes the specified key-value pair to write buffer
+func (s *LevelDB) set(key, value []byte) {
+    s.batch.Set(key, value)
 }
 
-func (s *LevelDB) StoreUnspentBill(number orchain.BillNumber, bill orchain.Bill) {
-    buf, err := butils.WriteToBytes(&bill)
-    ensure(err)
-    ensure(s.set(billKey(number), buf))
+// Writes the remove-operation to the write buffer
+func (s *LevelDB) del(key []byte) {
+    s.batch.Delete(key)
 }
 
-func (s *LevelDB) FetchUnspentBill(number orchain.BillNumber) *orchain.Bill {
-    buf := s.get(billKey(number))
-    if buf == nil { return nil }
-    bill := &orchain.Bill{}
-    ensure(butils.ReadAllInto(bill, buf))
-    return bill
+// Applies all operations in the buffer
+func (s *LevelDB) flush() error {
+    return s.db.Apply(s.batch, &db.WriteOptions{true})
 }
 
-func (s *LevelDB) SpendBill(number orchain.BillNumber) {
-    ensure(s.del(billKey(number)))
-}
-
-////////////////////////////
-
-func (s *LevelDB) get(key []byte) []byte {
-    buf, err := s.db.Get(key, nil)
-    if err == nil {
-        s.log.Printf("Get [%x] => [%x]", key, buf)
-    } else {
-        s.log.Printf("Get [%x] => [%x] [Cause: %v]", key, buf, err)
-    }
-    return buf
-}
-
-func (s *LevelDB) set(key []byte, val []byte) error {
-    s.log.Printf("Set [%x] => [%x]", key, val)
-    err := s.db.Set(key, val, &db.WriteOptions{true})
-    if err != nil {
-        s.log.Printf("Cause: %v", err)
-    }
-    return err
-}
-
-func (s *LevelDB) del(key []byte) error {
-    s.log.Printf("Del [%x]", key)
-    err := s.db.Delete(key, &db.WriteOptions{true})
-    if err != nil {
-        s.log.Printf("Cause: %v", err)
-    }
-    return err
-}
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func uint256Key(prefix byte, id butils.Uint256) []byte {
     key := &bytes.Buffer{}
@@ -204,7 +259,7 @@ func uint64Key(prefix byte, num uint64) []byte {
 
 func billKey(number orchain.BillNumber) []byte {
     buf := &bytes.Buffer{}
-    ensure(butils.WriteByte(buf, prefix_BILL))
+    ensure(butils.WriteByte(buf, prefix_B))
     ensure(number.Write(buf))
     return buf.Bytes()
 }

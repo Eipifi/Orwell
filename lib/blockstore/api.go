@@ -11,24 +11,23 @@ type BlockStorage interface {
     Head() butils.Uint256
 }
 
+// This database is responsible for keeping the storage in consistent state, with atomic updates.
+// The higher layer must check if the block is legal.
 type Database interface {
-    StoreHead(butils.Uint256, uint64)
-    FetchHead() (butils.Uint256, uint64)
 
-    StoreHeader(*orchain.Header, uint64) error
-    FetchHeader(butils.Uint256) *orchain.Header
-    FetchHeaderByNum(uint64) *orchain.Header
-    RemoveHeader(butils.Uint256)
+    // Basic info methods
+    Length() uint64
+    Head() butils.Uint256
 
-    StoreBlockTransactionIDs(butils.Uint256, []butils.Uint256)
-    FetchBlockTransactionIDs(butils.Uint256) []butils.Uint256
-    RemoveBlockTransactionIDs(butils.Uint256)
+    // Write operations
+    PutBlock(*orchain.Block) error
+    PopBlock() error
 
-    StoreTransaction(*orchain.Transaction) error
-    FetchTransaction(butils.Uint256) *orchain.Transaction
-    RemoveTransaction(butils.Uint256)
+    // Read operations
+    GetHeaderByID(butils.Uint256) *orchain.Header
+    GetHeaderByNum(uint64) *orchain.Header
+    GetTransaction(butils.Uint256) *orchain.Transaction
+    GetTransactions(butils.Uint256) []butils.Uint256
+    GetBill(orchain.BillNumber) *orchain.Bill
 
-    StoreUnspentBill(orchain.BillNumber, orchain.Bill)
-    FetchUnspentBill(orchain.BillNumber) *orchain.Bill
-    SpendBill(orchain.BillNumber)
 }

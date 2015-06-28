@@ -13,6 +13,7 @@ type Command func([]string) error
 var commands = map[string] Command {
     "connections": cmdConnections,
     "connect": cmdConnect,
+    "stats": cmdStats,
 }
 
 func runConsole() {
@@ -50,6 +51,12 @@ func cmdConnect(args []string) error {
     c, err := net.Dial("tcp", address)
     if err != nil { return err }
     go Connect(c)
+    return nil
+}
+
+func cmdStats(args []string) error {
+    fmt.Printf("# of blocks: %v\n", Storage.Length())
+    fmt.Printf("last block: %v\n", Storage.Head())
     return nil
 }
 
