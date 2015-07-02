@@ -22,3 +22,10 @@ func GetLogger(prefix string) *log.Logger {
 func DirectTo(w io.Writer) {
     logTarget.w = w
 }
+
+func DirectToFile(path string) error {
+    logFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0755)
+    if err != nil { return err }
+    DirectTo(logFile)
+    return nil
+}

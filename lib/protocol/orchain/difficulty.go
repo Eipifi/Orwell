@@ -291,6 +291,10 @@ func DifficultyToTarget(difficulty uint16) (i butils.Uint256) {
     return
 }
 
+func DifficultyToWork(difficulty uint16) (i butils.Uint256) {
+    return DifficultyToTarget(65535 - difficulty)
+}
+
 // The hash value must be lower than or equal to the target.
 func HashMeetsTarget(hash, target butils.Uint256) bool {
     return bytes.Compare(hash[:], target[:]) <= 0
