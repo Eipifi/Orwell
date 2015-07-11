@@ -23,9 +23,10 @@ func DirectTo(w io.Writer) {
     logTarget.w = w
 }
 
-func DirectToFile(path string) error {
+func DirectToFile(path string) {
     logFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0755)
-    if err != nil { return err }
+    if err != nil {
+        log.Panic(err)
+    }
     DirectTo(logFile)
-    return nil
 }

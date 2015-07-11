@@ -3,7 +3,6 @@ import (
     "code.google.com/p/leveldb-go/leveldb"
     "log"
     "orwell/lib/logging"
-    "github.com/mitchellh/go-homedir"
     "code.google.com/p/leveldb-go/leveldb/db"
     "orwell/lib/butils"
     "orwell/lib/protocol/orchain"
@@ -39,16 +38,17 @@ type LevelDB struct {
     batch leveldb.Batch
 }
 
-func Open(path string) (s *LevelDB, err error) {
+func Open(path string) (s *LevelDB) {
+    var err error
     s = &LevelDB{}
     s.log = logging.GetLogger("")
-    // Make sure the relative paths are properly handled
-    if path, err = homedir.Expand(path); err != nil { return }
     // Attempt opening a database
-    if s.db, err = leveldb.Open(path, nil); err != nil { return }
+    if s.db, err = leveldb.Open(path, nil); err != nil {
+        log.Fatalln(err)
+    }
     // Initialize database if necessary
     if _, err := s.get(key_HEAD); err == db.ErrNotFound {
-        s.write(key_HEAD, &head_data{})
+        ensure(s.write(key_HEAD, &head_data{}))
         ensure(s.flush())
     }
     return

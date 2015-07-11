@@ -1,30 +1,26 @@
 package main
 import (
+    "orwell/lib/config"
     "orwell/lib/logging"
+    "orwell/lib/cmd"
+    "orwell/orchain/command"
+    "orwell/orchain/serv"
     "orwell/lib/blockstore"
-    "orwell/lib/miner"
-    "log"
 )
 
-var Config *ConfigManager
-var Storage blockstore.BlockStorage
-var MinerSup *miner.MiningSupervisor
-
 func main() {
-    if err := initialize(); err != nil {
-        log.Panicln(err)
-    }
-    go runServer(Config.Port())
-    runConsole()
-}
+    // Initialize
+    config.LoadDefault()
+    logging.DirectToFile(config.Path("orchain.log"))
 
-func initialize() (err error) {
-    Config, err = InitConfig()
-    if err != nil { return }
-    if err = logging.DirectToFile(Config.RelPath("orchain.log")); err != nil { return }
-    db, err := blockstore.Open(Config.RelPath("db"))
-    if err != nil { return }
-    Storage = blockstore.NewBlockStore(db)
-    MinerSup = miner.NewSupervisor(Config.MinerAddress(), Storage)
-    return
+    // Load the block storage
+    blockstore.Initialize(config.Path("db"))
+
+    // Run server routines
+    go serv.RunServer(config.GetInt("port"))
+
+    // Run the console
+    cmd.Run([]cmd.Command{
+        &command.Stats{},
+    })
 }
