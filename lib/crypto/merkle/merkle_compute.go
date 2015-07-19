@@ -1,10 +1,10 @@
 package merkle
 import (
     "orwell/lib/crypto/hash"
-    "orwell/lib/butils"
+    "orwell/lib/foo"
 )
 
-func Compute(IDs []butils.Uint256) butils.Uint256 {
+func Compute(IDs []foo.U256) foo.U256 {
 
     l := len(IDs)
 
@@ -25,7 +25,7 @@ func Compute(IDs []butils.Uint256) butils.Uint256 {
     }
 
     // Create a new slice where the hashes will be held
-    Sums := make([]butils.Uint256, l/2, l/2)
+    Sums := make([]foo.U256, l/2, l/2)
 
     // Combine pairs of hashes
     for i := 0; i < l/2; i += 1 {
@@ -35,7 +35,7 @@ func Compute(IDs []butils.Uint256) butils.Uint256 {
     return Compute(Sums)
 }
 
-func combine(a, b butils.Uint256) butils.Uint256 {
+func combine(a, b foo.U256) foo.U256 {
     buf := append(a[:], b[:]...)
     return hash.Hash(buf)
 }

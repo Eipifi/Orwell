@@ -2,14 +2,15 @@ package orchain
 import (
     "orwell/lib/butils"
     "io"
+    "orwell/lib/foo"
 )
 
 const MSG_CODE_HEAD byte = 0x01
 const MSG_CODE_TAIL byte = 0x81
 
 type MsgHead struct {
-    Work butils.Uint256
-    Id butils.Uint256
+    Work foo.U256
+    Id foo.U256
 }
 
 func (m *MsgHead) Read(r io.Reader) (err error) {
@@ -27,7 +28,7 @@ func (m *MsgHead) Write(w io.Writer) (err error) {
 //////////////////////////////////////////////////////
 
 type MsgTail struct {
-    Work butils.Uint256
+    Work foo.U256
     Headers []Header
 }
 

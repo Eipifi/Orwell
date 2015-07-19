@@ -1,34 +1,39 @@
 package orchain
 import (
-    "orwell/lib/crypto/merkle"
-    "errors"
+    "io"
     "orwell/lib/butils"
 )
+
+const BLOCK_TXN_MAX = 4096
 
 type Block struct {
     Header Header
     Transactions []Transaction
 }
 
-func (b *Block) ComputeMerkleRoot() error {
-    root, err := getMerkleRoot(b.Transactions)
-    if err == nil { b.Header.MerkleRoot = root }
-    return err
-}
+func (b *Block) Read(r io.Reader) (err error) {
+    if err = b.Header.Read(r); err != nil { return }
 
-func getMerkleRoot(txns []Transaction) (hash butils.Uint256, err error) {
-    n := len(txns)
-    h := make([]butils.Uint256, n)
-    for i := 0; i < n; i += 1 {
-        h[i], err = txns[i].ID()
-        if err != nil { return }
+    var num uint64
+    if num, err = butils.ReadVarUint(r); err != nil { return }
+    if num > BLOCK_TXN_MAX { return ErrArrayTooLarge }
+    b.Transactions = make([]Transaction, num)
+    for i := 0; i < int(num); i += 1 {
+        if err = b.Transactions[i].Read(r); err != nil { return }
     }
-    return merkle.Compute(h), nil
+
+    return nil
 }
 
-func (b *Block) CheckMerkleRoot() error {
-    root, err := getMerkleRoot(b.Transactions)
-    if err != nil { return err }
-    if butils.Compare(b.Header.MerkleRoot, root) == 0 { return nil }
-    return errors.New("Merkle roots do not match")
+func (b *Block) Write(w io.Writer) (err error) {
+    if err = b.Header.Write(w); err != nil { return }
+
+    num := uint64(len(b.Transactions))
+    if num > BLOCK_TXN_MAX { return ErrArrayTooLarge }
+    if err = butils.WriteVarUint(w, num); err != nil { return }
+    for i := 0; i < int(num); i += 1 {
+        if err = b.Transactions[i].Write(w); err != nil { return }
+    }
+
+    return nil
 }

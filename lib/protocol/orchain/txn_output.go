@@ -2,10 +2,11 @@ package orchain
 import (
     "io"
     "orwell/lib/butils"
+    "orwell/lib/foo"
 )
 
 type Bill struct {
-    Target butils.Uint256       // hash of the new owner's public key
+    Target foo.U256       // hash of the new owner's public key
     Value uint64                // amount of transferred money
 }
 

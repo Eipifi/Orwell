@@ -2,9 +2,10 @@ package hash
 import (
     "crypto/sha256"
     "orwell/lib/butils"
+    "orwell/lib/foo"
 )
 
-func Hash(data []byte) butils.Uint256 {
+func Hash(data []byte) foo.U256 {
     return sha256.Sum256(data)
 }
 
@@ -13,7 +14,7 @@ func HashBytes(data []byte) []byte {
     return id[:]
 }
 
-func HashOf(w butils.Writable) (id butils.Uint256, err error) {
+func HashOf(w butils.Writable) (id foo.U256, err error) {
     buf, err := butils.WriteToBytes(w)
     if err != nil { return }
     return Hash(buf), nil

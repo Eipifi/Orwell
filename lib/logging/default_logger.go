@@ -19,12 +19,16 @@ func GetLogger(prefix string) *log.Logger {
     return log.New(&logTarget, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
 }
 
+func GetStdLogger(prefix string) *log.Logger {
+    return log.New(os.Stdout, "", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile)
+}
+
 func DirectTo(w io.Writer) {
     logTarget.w = w
 }
 
 func DirectToFile(path string) {
-    logFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0755)
+    logFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
     if err != nil {
         log.Panic(err)
     }

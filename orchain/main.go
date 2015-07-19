@@ -5,7 +5,7 @@ import (
     "orwell/lib/cmd"
     "orwell/orchain/command"
     "orwell/orchain/serv"
-    "orwell/lib/blockstore"
+    "orwell/lib/db"
 )
 
 func main() {
@@ -14,7 +14,7 @@ func main() {
     logging.DirectToFile(config.Path("orchain.log"))
 
     // Load the block storage
-    blockstore.Initialize(config.Path("db"))
+    db.Initialize(config.Path("db"))
 
     // Run server routines
     go serv.RunServer(config.GetInt("port"))
@@ -22,5 +22,7 @@ func main() {
     // Run the console
     cmd.Run([]cmd.Command{
         &command.Stats{},
+        &command.Miner{},
+        &command.Net{},
     })
 }

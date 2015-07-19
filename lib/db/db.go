@@ -1,49 +1,77 @@
-package blockstore
+package db
 import (
     "errors"
     "orwell/lib/protocol/orchain"
-    "orwell/lib/butils"
+    "orwell/lib/foo"
+    "orwell/lib/utils"
 )
 
-type BlockStorageImpl struct {
-    db Database
+type DBI struct {
+    s Storage
 }
 
-func NewBlockStore(storage Database) BlockStorage {
-    s := &BlockStorageImpl{storage}
-    if s.Length() == 0 {
-        ensure(s.Push(GenesisBlock()))
+func NewDB(storage Storage) DB {
+    s := &DBI{storage}
+    state := s.State()
+    if state.Length == 0 {
+        utils.Ensure(s.Push(GenesisBlock()))
     }
     return s
 }
 
-func (s *BlockStorageImpl) Head() butils.Uint256 {
-    return s.db.Head()
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func (d *DBI) State() *State {
+    return d.s.State()
 }
 
-func (s *BlockStorageImpl) Length() uint64 {
-    return s.db.Length()
+func (d *DBI) GetBlockByID(id foo.U256) *orchain.Block { // TODO: cache
+    header := d.GetHeaderByID(id)
+    if header == nil { return nil }
+    block := &orchain.Block{}
+    block.Header = *header
+    for _, t := range d.s.GetTransactions(id) {
+        txn := d.s.GetTransaction(t)
+        utils.Assert(txn != nil)
+        block.Transactions = append(block.Transactions, *txn)
+    }
+    return block
 }
 
-func (s *BlockStorageImpl) GetHeaderByID(id butils.Uint256) *orchain.Header {
-    return s.db.GetHeaderByID(id)
+func (d *DBI) GetHeaderByID(id foo.U256) *orchain.Header { // TODO: cache
+    return d.s.GetHeaderByID(id)
 }
 
-func (s *BlockStorageImpl) GetHeaderByNum(num uint64) *orchain.Header {
-    return s.db.GetHeaderByNum(num)
+func (d *DBI) GetHeaderByNum(num uint64) *orchain.Header {
+    return d.s.GetHeaderByNum(num)
 }
 
-func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
+func (d *DBI) GetNumByID(id foo.U256) *uint64 { // TODO: cache
+    return d.s.GetNumByID(id)
+}
+
+func (d *DBI) GetIDByNum(num uint64) *foo.U256 {
+    return d.s.GetIDByNum(num)
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func (d *DBI) Push(b *orchain.Block) (err error) {
     // Calculate the block id
     bid := b.Header.ID()
+    state := d.State()
 
     // Check if block is a child of the current head
-    if ! butils.Equal(s.Head(), b.Header.Previous) {
-        return errors.New("The 'Previous' field of the block dies not match the stored head")
+    if ! foo.Equal(state.Head, b.Header.Previous) {
+        return errors.New("The 'Previous' field of the block does not match the stored head")
     }
 
     // Check if the difficulty value is correct
-    if ComputeDifficulty(s.Length(), b.Header.Timestamp, s) != b.Header.Difficulty {
+    if ComputeDifficulty(state.Length, b.Header.Timestamp, d) != b.Header.Difficulty {
         return errors.New("Invalid difficulty value")
     }
 
@@ -53,8 +81,8 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
     }
 
     // Check if the timestamp is correct
-    if s.Length() > 0 {
-        previous_header := s.db.GetHeaderByID(s.Head())
+    if state.Length > 0 {
+        previous_header := d.s.GetHeaderByID(state.Head)
         if b.Header.Timestamp < previous_header.Timestamp {
             return errors.New("Block timestamp is smaller than the previous one")
         }
@@ -72,7 +100,7 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
     to_spend := make(map[orchain.BillNumber] bool)
     for _, txn := range b.Transactions {
         for i, inp := range txn.Inputs {
-            bill := s.db.GetBill(inp)
+            bill := d.s.GetBill(inp)
             if bill == nil {
                 return errors.New("Input bill is already spent or does not exist")
             }
@@ -82,9 +110,12 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
             to_spend[inp] = true
             pk_id, err := txn.Proofs[i].PublicKey.ID()
             if err != nil { return err }
-            if ! butils.Equal(bill.Target, pk_id) {
+            if ! foo.Equal(bill.Target, pk_id) {
                 return errors.New("The public key does not match the owner of the unspent transaction")
             }
+        }
+        for _, out := range txn.Outputs {
+            if out.Value == 0 { return errors.New("Bills of value 0 are not allowed") }
         }
     }
     var fees uint64 = 0
@@ -95,8 +126,8 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
         var input_sum uint64 = 0
         var output_sum uint64 = 0
         for _, inp := range txn.Inputs {
-            bill := s.db.GetBill(inp)
-            assert(bill != nil) // we already checked if the input bills are unspent, so it should be ok
+            bill := d.s.GetBill(inp)
+            utils.Assert(bill != nil) // we already checked if the input bills are unspent, so it should be ok
             input_sum += bill.Value
         }
         for _, out := range txn.Outputs {
@@ -109,13 +140,13 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
     }
 
     // Calculate the reward for this block number
-    var reward uint64 = 50 // TODO: implement
+    var reward uint64 = orchain.GetReward(state.Length)
 
     // Check if the first transaction correctly grants all the fees (plus reward)
     var txn0_input_sum uint64 = 0
     var txn0_output_sum uint64 = 0
     for _, inp := range b.Transactions[0].Inputs {
-        txn0_input_sum += s.db.GetBill(inp).Value
+        txn0_input_sum += d.s.GetBill(inp).Value
     }
     for _, out := range b.Transactions[0].Outputs {
         txn0_output_sum += out.Value
@@ -127,10 +158,10 @@ func (s *BlockStorageImpl) Push(b *orchain.Block) (err error) {
     // All checks passed, now save the block
 
     // Insert the block
-    ensure(s.db.PutBlock(b))
+    utils.Ensure(d.s.PutBlock(b))
     return nil
 }
 
-func (s *BlockStorageImpl) Pop() {
-    ensure(s.db.PopBlock())
+func (d *DBI) Pop() {
+    utils.Ensure(d.s.PopBlock())
 }

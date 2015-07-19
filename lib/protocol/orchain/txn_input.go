@@ -2,10 +2,11 @@ package orchain
 import (
     "io"
     "orwell/lib/butils"
+    "orwell/lib/foo"
 )
 
 type BillNumber struct {
-    Txn butils.Uint256          // transaction being referenced
+    Txn foo.U256                // transaction being referenced
     Index uint64                // output number in the referenced transaction
 }
 

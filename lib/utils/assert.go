@@ -1,13 +1,13 @@
-package blockstore
+package utils
 import "errors"
 
-func ensure(err error) {
+func Ensure(err error) {
     if err != nil {
         panic(err)
     }
 }
 
-func assert(condition bool) {
+func Assert(condition bool) {
     if ! condition {
         panic(errors.New("Assertion failed"))
     }

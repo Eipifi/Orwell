@@ -6,6 +6,7 @@ import (
     "orwell/lib/crypto/hash"
     "io"
     "orwell/lib/butils"
+    "orwell/lib/foo"
 )
 
 type PubKey ecdsa.PublicKey
@@ -35,7 +36,7 @@ func (k *PubKey) Verify(payload []byte, s *Signature) error {
     return errors.New("Invalid signature")
 }
 
-func (k *PubKey) ID() (id butils.Uint256, err error) {
+func (k *PubKey) ID() (id foo.U256, err error) {
     buf, err := butils.WriteToBytes(k)
     if err == nil { id = hash.Hash(buf) }
     return

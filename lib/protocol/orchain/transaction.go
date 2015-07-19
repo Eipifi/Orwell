@@ -5,6 +5,7 @@ import (
     "orwell/lib/butils"
     "orwell/lib/crypto/hash"
     "bytes"
+    "orwell/lib/foo"
 )
 
 const TXN_MAX_OUT uint64 = 128
@@ -69,7 +70,7 @@ func (t *Transaction) Write(w io.Writer) (err error) {
     return nil
 }
 
-func (t *Transaction) ID() (butils.Uint256, error) {
+func (t *Transaction) ID() (foo.U256, error) {
     return hash.HashOf(t)
 }
 

@@ -1,7 +1,7 @@
 package command
 import (
     "fmt"
-    "orwell/lib/blockstore"
+    "orwell/lib/db"
 )
 
 type Stats struct{}
@@ -12,10 +12,13 @@ func (*Stats) Name() string {
 
 func (*Stats) Run([]string) error {
 
-    s := blockstore.Get()
+    state := db.Get().State()
 
-    fmt.Printf("# of blocks: %v\n", s.Length())
-    fmt.Printf("last block: %v\n", s.Head())
-    fmt.Printf("difficulty: %v\n", s.GetHeaderByID(s.Head()).Difficulty)
+    fmt.Printf("# of blocks: %v\n", state.Length)
+    fmt.Printf("last block: %v\n", state.Head)
+    fmt.Printf("Total work: %v\n", state.Work)
+    fmt.Printf("difficulty: %v\n", db.Get().GetHeaderByID(state.Head).Difficulty)
+
+    fmt.Printf("Txns of last block: %+v\n", db.Get().GetBlockByID(state.Head))
     return nil
 }
