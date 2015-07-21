@@ -2,6 +2,7 @@ package db
 import (
     "orwell/lib/foo"
     "orwell/lib/protocol/orchain"
+    "orwell/lib/utils"
 )
 
 var GENESIS_DIFFICULTY foo.U256 = foo.ONE
@@ -22,9 +23,7 @@ func GenesisBlock() (b *orchain.Block) {
             },
         },
     }
-    _ = b.ComputeMerkleRoot()
-
+    utils.Ensure(b.ComputeMerkleRoot())
     // TODO: make a hash check
-
     return
 }

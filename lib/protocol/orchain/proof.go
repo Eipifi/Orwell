@@ -2,7 +2,6 @@ package orchain
 import (
     "orwell/lib/crypto/sig"
     "io"
-    "orwell/lib/foo"
 )
 
 type Proof struct {
@@ -22,6 +21,6 @@ func (p *Proof) Write(w io.Writer) (err error) {
     return
 }
 
-func (p *Proof) Check(hash foo.U256) error {
-    return p.PublicKey.Verify(hash[:], &(p.Signature))
+func (p *Proof) Check(data []byte) error {
+    return p.PublicKey.Verify(data, &(p.Signature))
 }

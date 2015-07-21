@@ -4,6 +4,7 @@ import (
     "orwell/lib/protocol/orchain"
     "orwell/lib/foo"
     "orwell/lib/utils"
+    "github.com/deckarep/golang-set"
 )
 
 type DBI struct {
@@ -91,67 +92,59 @@ func (d *DBI) Push(b *orchain.Block) (err error) {
     // Check if the Merkle root matches (and also if there is at least one transaction)
     if err = b.CheckMerkleRoot(); err != nil { return }
 
-    // Check if the signatures correctly sign the transaction head
-    for _, txn := range b.Transactions {
-        if err = txn.VerifySignatures(); err != nil { return }
-    }
+    // We'll collect all inputs and check for duplicates
+    to_spend := mapset.NewSet()
 
-    // Check if input bills are unspent and if the spend proofs are correct
-    to_spend := make(map[orchain.BillNumber] bool)
-    for _, txn := range b.Transactions {
+    // Here we'll store the sum of all fees
+    var total_input_sum, total_output_sum uint64
+
+    // For each transaction
+    for txn_num, txn := range b.Transactions {
+
+        if txn_num == 0 { // Check the coinbase transaction
+            if txn.Proof != nil { return errors.New("The proof is not required/allowed in a coinbase transaction") }
+            if len(txn.Inputs) != 0 { return errors.New("Coinbase transaction can have no inputs") }
+        } else {
+            // Check if the signatures correctly sign the transaction head
+            if err = txn.Verify(); err != nil { return }
+        }
+
+        var txn_input_sum, txn_output_sum uint64
+
+        // Check transaction inputs
+        var sender_address foo.U256
         for i, inp := range txn.Inputs {
             bill := d.s.GetBill(inp)
-            if bill == nil {
-                return errors.New("Input bill is already spent or does not exist")
+            if bill == nil { return errors.New("Input bill is already spent or does not exist") }
+            if ! to_spend.Add(inp) { return errors.New("Two transactions in a block spend the same bill") }
+            if i == 0 {
+                sender_address = bill.Target
+            } else {
+                if sender_address != bill.Target { return errors.New("All inputs must be owned by the same person") }
             }
-            if _, ok := to_spend[inp]; ok {
-                return errors.New("Two transactions in a block spend the same bill")
-            }
-            to_spend[inp] = true
-            pk_id, err := txn.Proofs[i].PublicKey.ID()
-            if err != nil { return err }
-            if ! foo.Equal(bill.Target, pk_id) {
-                return errors.New("The public key does not match the owner of the unspent transaction")
-            }
+            txn_input_sum += bill.Value
         }
+
+        // Check transaction outputs
         for _, out := range txn.Outputs {
+            // TODO: triple-check if the output value does not overflow the counter
             if out.Value == 0 { return errors.New("Bills of value 0 are not allowed") }
+            txn_output_sum += out.Value
         }
-    }
-    var fees uint64 = 0
-    // Check if all transactions (except the first) have a legal input/output balance
-    // TODO verify if we do not get any uint64 overflows here
-    for i := 1; i < len(b.Transactions); i += 1 {
-        txn := b.Transactions[i]
-        var input_sum uint64 = 0
-        var output_sum uint64 = 0
-        for _, inp := range txn.Inputs {
-            bill := d.s.GetBill(inp)
-            utils.Assert(bill != nil) // we already checked if the input bills are unspent, so it should be ok
-            input_sum += bill.Value
+
+        if txn_num != 0 {
+            if txn_output_sum > txn_input_sum { return errors.New("Transaction output must not be greater then its input") }
         }
-        for _, out := range txn.Outputs {
-            output_sum += out.Value
-        }
-        if output_sum > input_sum {
-            return errors.New("Transaction output sum is bigger than its input sum")
-        }
-        fees += input_sum - output_sum
+
+        total_input_sum += txn_input_sum
+        total_output_sum += txn_output_sum
     }
 
-    // Calculate the reward for this block number
-    var reward uint64 = orchain.GetReward(state.Length)
+    // The transaction should also generate a reward
+    total_input_sum += orchain.GetReward(state.Length)
 
-    // Check if the first transaction correctly grants all the fees (plus reward)
-    var txn0_input_sum uint64 = 0
-    var txn0_output_sum uint64 = 0
-    for _, inp := range b.Transactions[0].Inputs {
-        txn0_input_sum += d.s.GetBill(inp).Value
-    }
-    for _, out := range b.Transactions[0].Outputs {
-        txn0_output_sum += out.Value
-    }
-    if txn0_input_sum + fees + reward != txn0_output_sum {
+    // Check if the sums match up
+    if total_input_sum != total_output_sum {
         return errors.New("Invalid reward/fees")
     }
 

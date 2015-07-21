@@ -19,6 +19,5 @@ func (*Stats) Run([]string) error {
     fmt.Printf("Total work: %v\n", state.Work)
     fmt.Printf("difficulty: %v\n", db.Get().GetHeaderByID(state.Head).Difficulty)
 
-    fmt.Printf("Txns of last block: %+v\n", db.Get().GetBlockByID(state.Head))
     return nil
 }
