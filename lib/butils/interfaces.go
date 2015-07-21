@@ -1,6 +1,9 @@
 package butils
 
-import "io"
+import (
+    "io"
+    "errors"
+)
 
 /*
     Main byte conversion interfaces for Orwell.
@@ -36,3 +39,7 @@ type ByteChunk interface {
     ByteReadable
     ByteWritable
 }
+
+//////////////////////////////
+
+var ErrLimitExceeded = errors.New("Length limit exceeded")

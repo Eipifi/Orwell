@@ -9,10 +9,12 @@ import (
     "orwell/lib/foo"
 )
 
+const PUBKEY_MAX_LENGTH uint64 = 4096
+
 type PubKey ecdsa.PublicKey
 
 func (k *PubKey) Read(r io.Reader) error {
-    buf, err := butils.ReadVarBytes(r)
+    buf, err := butils.ReadVarBytes(r, PUBKEY_MAX_LENGTH)
     if err != nil { return err }
     val, err := x509.ParsePKIXPublicKey(buf)
     if err != nil { return err }
@@ -27,7 +29,7 @@ func (k *PubKey) Read(r io.Reader) error {
 func (k *PubKey) Write(w io.Writer) error {
     buf, err := x509.MarshalPKIXPublicKey((*ecdsa.PublicKey)(k))
     if err != nil { return err }
-    return butils.WriteVarBytes(w, buf)
+    return butils.WriteVarBytes(w, buf, PUBKEY_MAX_LENGTH)
 }
 
 func (k *PubKey) Verify(payload []byte, s *Signature) error {

@@ -67,14 +67,15 @@ func ReadVarUint(r io.Reader) (uint64, error) {
     return uint64(v), nil
 }
 
-func ReadVarBytes(r io.Reader) ([]byte, error) {
+func ReadVarBytes(r io.Reader, limit uint64) ([]byte, error) {
     l, err := ReadVarUint(r);
     if err != nil { return nil, err }
+    if l > limit { return nil, ErrLimitExceeded }
     return ReadAllocate(r, l)
 }
 
-func ReadString(r io.Reader) (string, error) {
-    buf, err := ReadVarBytes(r)
+func ReadString(r io.Reader, limit uint64) (string, error) {
+    buf, err := ReadVarBytes(r, limit)
     if err != nil { return "", err }
     return string(buf), nil
 }

@@ -21,6 +21,7 @@ func GenesisBlock() (b *orchain.Block) {
                     Value: orchain.GetReward(0),
                 },
             },
+            Label: "TODO: wymyślić fajny label",
         },
     }
     utils.Ensure(b.ComputeMerkleRoot())

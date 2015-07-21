@@ -62,7 +62,7 @@ func (m *Miner) deliver(block orchain.Block) {
     if err == nil {
         log.Printf("Mined block id=%v df=%v \n", block.Header.ID(), block.Header.Difficulty)
     } else {
-        log.Print("Error while applying block:", err)
+        log.Printf("Error while applying block: %v", err)
     }
     m.update()
 }
@@ -89,6 +89,7 @@ func (m *Miner) update() {
                     Value: orchain.GetReward(num),
                 },
             },
+            Label: "Block #" + string(num),
         },
     }
     block.ComputeMerkleRoot()

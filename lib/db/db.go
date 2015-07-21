@@ -66,6 +66,13 @@ func (d *DBI) Push(b *orchain.Block) (err error) {
     bid := b.Header.ID()
     state := d.State()
 
+    // Check if no other block has the same id
+    // Note: while the chance of this happening is astronomically low, we still check this.
+    // SHA256 might get broken at some point in the future.
+    if d.s.GetHeaderByID(bid) != nil {
+        return errors.New("Block with this ID already exists")
+    }
+
     // Check if block is a child of the current head
     if ! foo.Equal(state.Head, b.Header.Previous) {
         return errors.New("The 'Previous' field of the block does not match the stored head")
@@ -95,11 +102,22 @@ func (d *DBI) Push(b *orchain.Block) (err error) {
     // We'll collect all inputs and check for duplicates
     to_spend := mapset.NewSet()
 
+    // We also check if there are no transaction duplicates
+    txn_ids := mapset.NewSet()
+
     // Here we'll store the sum of all fees
     var total_input_sum, total_output_sum uint64
 
     // For each transaction
     for txn_num, txn := range b.Transactions {
+
+        var tid foo.U256
+        if tid, err = txn.ID(); err != nil { return }
+
+        // Check if no other transaction has the same ID
+        // Note: https://github.com/bitcoin/bips/blob/master/bip-0030.mediawiki
+        if d.s.GetTransaction(tid) != nil { return errors.New("Transaction ID already in use") }
+        if ! txn_ids.Add(tid) { return errors.New("Duplicate transactions in block") }
 
         if txn_num == 0 { // Check the coinbase transaction
             if txn.Proof != nil { return errors.New("The proof is not required/allowed in a coinbase transaction") }

@@ -52,11 +52,12 @@ func WriteVarUint(w io.Writer, val uint64) (err error) {
     return WriteUint64(w, uint64(val))
 }
 
-func WriteVarBytes(w io.Writer, buf []byte) error {
+func WriteVarBytes(w io.Writer, buf []byte, limit uint64) error {
+    if uint64(len(buf)) > limit { return ErrLimitExceeded }
     if err := WriteVarUint(w, uint64(len(buf))); err != nil { return err }
     return WriteFull(w, buf)
 }
 
-func WriteString(w io.Writer, val string) error {
-    return WriteVarBytes(w, []byte(val))
+func WriteString(w io.Writer, val string, limit uint64) error {
+    return WriteVarBytes(w, []byte(val), limit)
 }
