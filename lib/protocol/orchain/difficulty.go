@@ -5,16 +5,10 @@ const BLOCKS_PER_DIFFICULTY_CHANGE = 32
 const SECONDS_PER_BLOCK = 10
 
 func DifficultyToTarget(difficulty foo.U256) foo.U256 {
-    if difficulty == foo.ZERO {
+    if difficulty == foo.ZERO || difficulty == foo.ONE {
         return foo.MAX
     }
-
-    if difficulty == foo.ONE {
-        return foo.MAX
-    }
-
-    difficulty.Invert256()
-    return difficulty
+    return difficulty.Invert256()
 }
 
 func HashMeetsTarget(hash, target foo.U256) bool {
@@ -36,6 +30,10 @@ func UpdateDifficulty(difficulty foo.U256, delta_obtained uint64) foo.U256 {
         delta_obtained = delta_expected / 2
     }
 
-    difficulty.MulDiv64(delta_expected, delta_obtained)
-    return difficulty
+    result := difficulty.MulDiv64(delta_expected, delta_obtained)
+    if result == foo.ZERO {
+        return foo.ONE
+    } else {
+        return result
+    }
 }

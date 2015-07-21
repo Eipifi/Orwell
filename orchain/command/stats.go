@@ -10,7 +10,11 @@ func (*Stats) Name() string {
     return "stats"
 }
 
-func (*Stats) Run([]string) error {
+func (*Stats) Run(args []string) error {
+
+    if len(args) > 0 && args[0] == "pop" {
+        db.Get().Pop()
+    }
 
     state := db.Get().State()
 

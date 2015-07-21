@@ -12,35 +12,36 @@ func Compare(a, b U256) int {
     return bytes.Compare(a[:], b[:])
 }
 
-func (i *U256) SetBig(b *big.Int) {
-    i.SetBytes(b.Bytes())
+func BigToU256(b *big.Int) (r U256) {
+    r.SetBytes(b.Bytes())
+    return
 }
 
 func (i *U256) Big() *big.Int {
     return new(big.Int).SetBytes(i[:])
 }
 
-func (i *U256) MulDiv64(numerator, denominator uint64) {
+func (i *U256) MulDiv64(numerator, denominator uint64) U256 {
     d := i.Big()
     d = d.Mul(d, new(big.Int).SetUint64(numerator))
     d = d.Div(d, new(big.Int).SetUint64(denominator))
-    i.SetBig(d)
+    return BigToU256(d)
 }
 
-func (i *U256) Invert256() {
+func (i *U256) Invert256() U256 {
     n := new(big.Int).Exp(big.NewInt(2), big.NewInt(256), nil)
     n = n.Div(n, i.Big())
-    i.SetBig(n)
+    return BigToU256(n)
 }
 
-func (i *U256) Add(v U256) {
+func (i *U256) Plus(v U256) U256 {
     d := i.Big()
     d = d.Add(d, v.Big())
-    i.SetBig(d)
+    return BigToU256(d)
 }
 
-func (i *U256) Sub(v U256) {
+func (i *U256) Minus(v U256) U256 {
     d := i.Big()
     d = d.Sub(d, v.Big())
-    i.SetBig(d)
+    return BigToU256(d)
 }

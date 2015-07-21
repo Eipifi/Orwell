@@ -66,7 +66,7 @@ func (s *LDBStorage) PutBlock(b *orchain.Block) error {
     state := s.State()
     state.Length += 1
     state.Head = b.Header.ID()
-    state.Work.Add(b.Header.Difficulty)
+    state.Work = state.Work.Plus(b.Header.Difficulty)
     utils.Ensure(s.write(key_State, state))
     if err := s.write(uint256Key(prefix_H, state.Head), &b.Header); err != nil { return err }
     s.write(uint64Key(prefix_N, state.Length - 1), &state.Head)
@@ -100,7 +100,7 @@ func (s *LDBStorage) PopBlock() error {
     hid := h.ID()
     state.Length -= 1
     state.Head = h.Previous
-    state.Work.Sub(h.Difficulty)
+    state.Work = state.Work.Minus(h.Difficulty)
     utils.Ensure(s.write(key_State, state))
     s.del(uint256Key(prefix_H, hid))
     s.del(uint64Key(prefix_N, state.Length))

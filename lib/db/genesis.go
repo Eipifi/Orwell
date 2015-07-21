@@ -5,7 +5,7 @@ import (
     "orwell/lib/utils"
 )
 
-var GENESIS_DIFFICULTY foo.U256 = foo.ONE
+var GENESIS_DIFFICULTY foo.U256 = foo.ZERO
 
 func GenesisBlock() (b *orchain.Block) {
     b = &orchain.Block{}
