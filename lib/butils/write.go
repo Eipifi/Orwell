@@ -32,6 +32,12 @@ func WriteUint64(w io.Writer, val uint64) error {
     return WriteFull(w, tmp[:])
 }
 
+func Uint64ToBytes(val uint64) []byte {
+    var tmp [8]byte
+    ByteOrder.PutUint64(tmp[:], val)
+    return tmp[:]
+}
+
 func WriteVarUint(w io.Writer, val uint64) (err error) {
     // TODO: enforce single representation
     if val < 0xfd {

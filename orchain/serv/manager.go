@@ -5,10 +5,10 @@ import (
     "math/rand"
     "time"
     "orwell/lib/protocol/orchain"
-    "orwell/lib/db"
     "orwell/lib/foo"
     "errors"
     "github.com/deckarep/golang-set"
+    "orwell/lib/db"
 )
 
 type Manager struct {
@@ -77,7 +77,7 @@ func (m *Manager) syncLoop() {
 
 func (m *Manager) sync(peer *Peer) (err error) {
     rsp := &orchain.MsgTail{}
-    state := db.Get().State()
+    state := db.GetDB().State()
     var revert uint64 = 1
     for len(rsp.Headers) == 0 {
         if rsp, err = peer.AskHead(revert); err != nil { return }
@@ -91,13 +91,13 @@ func (m *Manager) sync(peer *Peer) (err error) {
     headers := rsp.Headers
     for {
         if len(headers) == 0 { return }
-        if db.Get().GetNumByID(headers[0].ID()) == nil { break }
+        if db.GetDB().GetNumByID(headers[0].ID()) == nil { break }
         headers = headers[1:]
     }
 
     // Drop the obsolete blocks
-    for (headers[0].Previous) != (db.Get().State().Head) {
-        db.Get().Pop()
+    for (headers[0].Previous) != (db.GetDB().State().Head) {
+        db.GetDB().Pop()
     }
 
     // Download blocks and apply in order
@@ -105,7 +105,7 @@ func (m *Manager) sync(peer *Peer) (err error) {
         var block_rsp *orchain.MsgBlock
         if block_rsp, err = peer.AskBlock(h.ID()); err != nil { return }
         if block_rsp.Block == nil { return } // The peer promised to deliver the block, and failed - what to do?
-        if err = db.Get().Push(block_rsp.Block); err != nil { return }
+        if err = db.GetDB().Push(block_rsp.Block); err != nil { return }
     }
 
     m.log.Printf("Sync successful, downloaded %v blocks", len(headers))

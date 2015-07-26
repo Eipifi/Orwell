@@ -1,75 +1,21 @@
 package db
 import (
-    "errors"
     "orwell/lib/protocol/orchain"
+    "errors"
     "orwell/lib/foo"
-    "orwell/lib/utils"
     "github.com/deckarep/golang-set"
+    "orwell/lib/utils"
+    "github.com/boltdb/bolt"
 )
 
-type DBI struct {
-    s Storage
-}
-
-func NewDB(storage Storage) DB {
-    s := &DBI{storage}
-    state := s.State()
-    if state.Length == 0 {
-        utils.Ensure(s.Push(GenesisBlock()))
-    }
-    return s
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func (d *DBI) State() *State {
-    return d.s.State()
-}
-
-func (d *DBI) GetBlockByID(id foo.U256) *orchain.Block { // TODO: cache
-    header := d.GetHeaderByID(id)
-    if header == nil { return nil }
-    block := &orchain.Block{}
-    block.Header = *header
-    for _, t := range d.s.GetTransactions(id) {
-        txn := d.s.GetTransaction(t)
-        utils.Assert(txn != nil)
-        block.Transactions = append(block.Transactions, *txn)
-    }
-    return block
-}
-
-func (d *DBI) GetHeaderByID(id foo.U256) *orchain.Header { // TODO: cache
-    return d.s.GetHeaderByID(id)
-}
-
-func (d *DBI) GetHeaderByNum(num uint64) *orchain.Header {
-    return d.s.GetHeaderByNum(num)
-}
-
-func (d *DBI) GetNumByID(id foo.U256) *uint64 { // TODO: cache
-    return d.s.GetNumByID(id)
-}
-
-func (d *DBI) GetIDByNum(num uint64) *foo.U256 {
-    return d.s.GetIDByNum(num)
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func (d *DBI) Push(b *orchain.Block) (err error) {
-    // Calculate the block id
+func VerifyNextBlock(t *bolt.Tx, b *orchain.Block) (err error) {
     bid := b.Header.ID()
-    state := d.State()
+    state := GetState(t)
 
     // Check if no other block has the same id
     // Note: while the chance of this happening is astronomically low, we still check this.
     // SHA256 might get broken at some point in the future.
-    if d.s.GetHeaderByID(bid) != nil {
+    if GetHeaderByID(t, bid) != nil {
         return errors.New("Block with this ID already exists")
     }
 
@@ -79,7 +25,7 @@ func (d *DBI) Push(b *orchain.Block) (err error) {
     }
 
     // Check if the difficulty value is correct
-    if ComputeDifficulty(state.Length, b.Header.Timestamp, d) != b.Header.Difficulty {
+    if Difficulty(t) != b.Header.Difficulty {
         return errors.New("Invalid difficulty value")
     }
 
@@ -90,7 +36,7 @@ func (d *DBI) Push(b *orchain.Block) (err error) {
 
     // Check if the timestamp is correct
     if state.Length > 0 {
-        previous_header := d.s.GetHeaderByID(state.Head)
+        previous_header := GetHeaderByID(t, state.Head)
         if b.Header.Timestamp < previous_header.Timestamp {
             return errors.New("Block timestamp is smaller than the previous one")
         }
@@ -112,11 +58,11 @@ func (d *DBI) Push(b *orchain.Block) (err error) {
     for txn_num, txn := range b.Transactions {
 
         var tid foo.U256
-        if tid, err = txn.ID(); err != nil { return }
+        if tid, err = txn.TryID(); err != nil { return }
 
         // Check if no other transaction has the same ID
         // Note: https://github.com/bitcoin/bips/blob/master/bip-0030.mediawiki
-        if d.s.GetTransaction(tid) != nil { return errors.New("Transaction ID already in use") }
+        if GetTransaction(t, tid) != nil { return errors.New("Transaction ID already in use") }
         if ! txn_ids.Add(tid) { return errors.New("Duplicate transactions in block") }
 
         if txn_num == 0 { // Check the coinbase transaction
@@ -132,8 +78,9 @@ func (d *DBI) Push(b *orchain.Block) (err error) {
         // Check transaction inputs
         var sender_address foo.U256
         for i, inp := range txn.Inputs {
-            bill := d.s.GetBill(inp)
-            if bill == nil { return errors.New("Input bill is already spent or does not exist") }
+            if GetBillStatus(t, &inp) != UNSPENT { return errors.New("Input bill is already spent or does not exist") }
+            bill := GetBill(t, &inp)
+            utils.Assert(bill != nil)
             if ! to_spend.Add(inp) { return errors.New("Two transactions in a block spend the same bill") }
             if i == 0 {
                 sender_address = bill.Target
@@ -166,13 +113,5 @@ func (d *DBI) Push(b *orchain.Block) (err error) {
         return errors.New("Invalid reward/fees")
     }
 
-    // All checks passed, now save the block
-
-    // Insert the block
-    utils.Ensure(d.s.PutBlock(b))
     return nil
-}
-
-func (d *DBI) Pop() {
-    utils.Ensure(d.s.PopBlock())
 }

@@ -6,6 +6,7 @@ import (
     "orwell/lib/crypto/hash"
     "bytes"
     "orwell/lib/foo"
+    "orwell/lib/utils"
 )
 
 const TXN_MAX_OUT uint64 = 128
@@ -69,8 +70,14 @@ func (t *Transaction) Write(w io.Writer) (err error) {
     return butils.WriteOptional(w, t.Proof)
 }
 
-func (t *Transaction) ID() (foo.U256, error) {
+func (t *Transaction) TryID() (foo.U256, error) {
     return hash.HashOf(t)
+}
+
+func (t *Transaction) ID() foo.U256 {
+    id, err := t.TryID()
+    utils.Ensure(err)
+    return id
 }
 
 // This method only verifies if the signature correctly signs the transaction head.

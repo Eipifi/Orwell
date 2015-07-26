@@ -51,6 +51,11 @@ func ReadUint64(r io.Reader) (uint64, error) {
     return ByteOrder.Uint64(tmp[:]), nil
 }
 
+func BytesToUint64(data []byte) uint64 {
+    if len(data) != 8 { panic("Invalid slice length for uint64") }
+    return ByteOrder.Uint64(data)
+}
+
 func ReadVarUint(r io.Reader) (uint64, error) {
     v, err := ReadUint8(r)
     if err != nil { return 0, err }

@@ -14,7 +14,7 @@ func main() {
     logging.DirectToFile(config.Path("orchain.log"))
 
     // Load the block storage
-    db.Initialize(config.Path("db"))
+    db.Initialize(config.Path("chain.bdb"))
 
     // Run server routines
     go serv.RunServer(config.GetInt("port"))

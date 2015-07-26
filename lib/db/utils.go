@@ -1,15 +1,29 @@
 package db
 import (
-    "orwell/lib/foo"
-    "orwell/lib/protocol/orchain"
+    "orwell/lib/butils"
+    "orwell/lib/utils"
+    "github.com/boltdb/bolt"
 )
 
-func ComputeDifficulty(num uint64, ts uint64, d DB) foo.U256 {
-    if num == 0 { return GENESIS_DIFFICULTY }
-    if num % orchain.BLOCKS_PER_DIFFICULTY_CHANGE == 0 {
-        prev := d.GetHeaderByNum(num - orchain.BLOCKS_PER_DIFFICULTY_CHANGE)
-        return orchain.UpdateDifficulty(prev.Difficulty, ts - prev.Timestamp)
-    } else {
-        return d.GetHeaderByNum(num - 1).Difficulty
-    }
+func Put(t *bolt.Tx, bucket, key, value []byte) {
+    utils.Ensure(t.Bucket(bucket).Put(key, value))
+}
+
+func Get(t *bolt.Tx, bucket, key []byte) []byte {
+    return t.Bucket(bucket).Get(key)
+}
+
+func Del(t *bolt.Tx, bucket, key []byte) {
+    utils.Ensure(t.Bucket(bucket).Delete(key))
+}
+
+func Read(t *bolt.Tx, bucket, key []byte, target butils.Readable) bool {
+    data := Get(t, bucket, key)
+    if data == nil { return false }
+    utils.Ensure(butils.ReadAllInto(target, data))
+    return true
+}
+
+func Write(t *bolt.Tx, bucket, key []byte, target butils.Writable) {
+    Put(t, bucket, key, butils.ToBytes(target))
 }

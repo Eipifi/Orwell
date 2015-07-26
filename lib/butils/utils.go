@@ -4,6 +4,7 @@ import (
     "errors"
     "io"
     "reflect"
+    "orwell/lib/utils"
 )
 
 func ReadAllInto(r Readable, data []byte) (err error) {
@@ -17,6 +18,12 @@ func WriteToBytes(w Writable) ([]byte, error) {
     buf := &bytes.Buffer{}
     if err := w.Write(buf); err != nil { return nil, err }
     return buf.Bytes(), nil
+}
+
+func ToBytes(w Writable) []byte {
+    data, err := WriteToBytes(w)
+    utils.Ensure(err)
+    return data
 }
 
 func WriteOptional(w io.Writer, target Writable) (err error) {
@@ -34,3 +41,4 @@ func ReadOptional(r io.Reader, target Readable) (flag byte, err error) {
     if flag != 0x01 { return flag, errors.New("Invalid flag value") }
     return flag, target.Read(r)
 }
+
