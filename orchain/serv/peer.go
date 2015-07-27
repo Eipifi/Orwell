@@ -62,7 +62,7 @@ func (p *Peer) handleMsgHead(req *orchain.MsgHead) (rsp *orchain.MsgTail, err er
     //        - I have more work, but I do not know your head block   // hi work, no headers
     //        - I have less, can't help ya                            // lo work, no headers
 
-    state := db.GetDB().State()
+    state := db.Get().State()
 
     rsp = &orchain.MsgTail{}
     rsp.Work = state.Work
@@ -74,14 +74,14 @@ func (p *Peer) handleMsgHead(req *orchain.MsgHead) (rsp *orchain.MsgTail, err er
         return
     } else {
         // we have more - wonder if we can help here
-        num_ptr := db.GetDB().GetNumByID(req.Id)
+        num_ptr := db.Get().GetNumByID(req.Id)
 
         // If the header is not known, we can't send any subsequent headers
         if num_ptr == nil { return }
 
         // But if we already know this header, we can help - let's send the rest
         for num := 1 + *num_ptr; num < state.Length; num += 1 {
-            header := db.GetDB().GetHeaderByNum(num)
+            header := db.Get().GetHeaderByNum(num)
             if header == nil { break }
             rsp.Headers = append(rsp.Headers, *header)
         }
@@ -90,7 +90,7 @@ func (p *Peer) handleMsgHead(req *orchain.MsgHead) (rsp *orchain.MsgTail, err er
 }
 
 func (p *Peer) handleMsgGetBlock(req *orchain.MsgGetBlock) (rsp *orchain.MsgBlock, err error) {
-    return &orchain.MsgBlock{db.GetDB().GetBlockByID(req.ID)}, nil
+    return &orchain.MsgBlock{db.Get().GetBlockByID(req.ID)}, nil
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,7 +102,7 @@ var ErrInvalidResponse = errors.New("Invalid response type")
 func (p *Peer) AskHead(revert uint64) (*orchain.MsgTail, error) {
     utils.Assert(revert >= 1)
 
-    state := db.GetDB().State()
+    state := db.Get().State()
     req := &orchain.MsgHead{}
     req.Work = state.Work
 
@@ -112,7 +112,7 @@ func (p *Peer) AskHead(revert uint64) (*orchain.MsgTail, error) {
     } else {
         num -= revert
     }
-    id := db.GetDB().GetIDByNum(num)
+    id := db.Get().GetIDByNum(num)
     utils.Assert(id != nil)
     req.Id = *id
 

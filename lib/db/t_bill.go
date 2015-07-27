@@ -5,7 +5,6 @@ import (
     "orwell/lib/butils"
     "orwell/lib/utils"
     "bytes"
-    "github.com/boltdb/bolt"
 )
 
 type BillStatus byte
@@ -20,39 +19,39 @@ var BUCKET_UNSPENT = []byte("unspent")  // NUM -> 0xFF
 var BUCKET_OWNED = []byte("owned")      // OWNER | NUM -> 0xFF
 var FLAG = []byte{0xFF}
 
-func GetBill(t *bolt.Tx, num *orchain.BillNumber) *orchain.Bill {
-    txn := GetTransaction(t, num.Txn)
+func (t *Tx) GetBill(num *orchain.BillNumber) *orchain.Bill {
+    txn := t.GetTransaction(num.Txn)
     if txn == nil { return nil }
     if uint64(len(txn.Outputs)) <= num.Index { return nil }
     return &txn.Outputs[num.Index]
 }
 
-func GetBillStatus(t *bolt.Tx, num *orchain.BillNumber) BillStatus {
-    bill := GetBill(t, num)
+func (t *Tx) GetBillStatus(num *orchain.BillNumber) BillStatus {
+    bill := t.GetBill(num)
     if bill == nil { return NONEXISTENT }
-    if Get(t, BUCKET_UNSPENT, butils.ToBytes(num)) == nil { return SPENT }
+    if t.Get(BUCKET_UNSPENT, butils.ToBytes(num)) == nil { return SPENT }
     return UNSPENT
 }
 
-func SetBillStatus(t *bolt.Tx, num *orchain.BillNumber, status BillStatus) {
-    bill := GetBill(t, num)
+func (t *Tx) SetBillStatus(num *orchain.BillNumber, status BillStatus) {
+    bill := t.GetBill(num)
     key := butils.ToBytes(num)
     if status == UNSPENT {
         utils.Assert(bill != nil)
-        Put(t, BUCKET_UNSPENT, key, FLAG)
-        Put(t, BUCKET_OWNED, utils.Cat(bill.Target[:], key), FLAG)
+        t.Put(BUCKET_UNSPENT, key, FLAG)
+        t.Put(BUCKET_OWNED, utils.Cat(bill.Target[:], key), FLAG)
     } else {
         if bill == nil {
             if status == NONEXISTENT { return }
             panic("Tried to spend a nonexistent bill")
         }
-        Del(t, BUCKET_UNSPENT, key)
-        Del(t, BUCKET_OWNED, utils.Cat(bill.Target[:], key))
+        t.Del(BUCKET_UNSPENT, key)
+        t.Del(BUCKET_OWNED, utils.Cat(bill.Target[:], key))
     }
 }
 
-func GetUnspentBillsByUser(t *bolt.Tx, user foo.U256) (res []orchain.BillNumber) {
-    c := t.Bucket(BUCKET_OWNED).Cursor()
+func (t *Tx) GetUnspentBillsByUser(user foo.U256) (res []orchain.BillNumber) {
+    c := t.tx.Bucket(BUCKET_OWNED).Cursor()
     prefix := user[:]
     for k, _ := c.Seek(prefix); bytes.HasPrefix(k, prefix); k, _ = c.Next() {
         num := orchain.BillNumber{}

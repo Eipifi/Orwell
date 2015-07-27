@@ -58,7 +58,7 @@ func (m *Miner) work() {
 }
 
 func (m *Miner) deliver(block orchain.Block) {
-    err := db.GetDB().Push(&block)
+    err := db.Get().Push(&block)
     if err == nil {
         log.Printf("Mined block id=%v df=%v \n", block.Header.ID(), block.Header.Difficulty)
     } else {
@@ -75,12 +75,12 @@ func (m *Miner) apply() {
 }
 
 func (m *Miner) update() {
-    state := db.GetDB().State()
+    state := db.Get().State()
     num := state.Length
     block := orchain.Block{}
     block.Header.Previous = state.Head
     block.Header.Timestamp = timestamps.CurrentTimestamp()
-    block.Header.Difficulty = db.GetDB().Difficulty()
+    block.Header.Difficulty = db.Get().Difficulty()
     block.Transactions = []orchain.Transaction{
         orchain.Transaction{
             Outputs: []orchain.Bill {

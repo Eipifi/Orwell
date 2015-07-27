@@ -12,12 +12,12 @@ func (*Stats) Name() string {
 
 func (*Stats) Run(args []string) error {
 
-    state := db.GetDB().State()
+    state := db.Get().State()
 
     fmt.Printf("# of blocks: %v\n", state.Length)
     fmt.Printf("last block: %v\n", state.Head)
     fmt.Printf("Total work: %v\n", state.Work)
-    fmt.Printf("difficulty: %v\n", db.GetDB().Difficulty())
+    fmt.Printf("difficulty: %v\n", db.Get().Difficulty())
 
     return nil
 }

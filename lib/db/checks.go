@@ -5,17 +5,16 @@ import (
     "orwell/lib/foo"
     "github.com/deckarep/golang-set"
     "orwell/lib/utils"
-    "github.com/boltdb/bolt"
 )
 
-func VerifyNextBlock(t *bolt.Tx, b *orchain.Block) (err error) {
+func (t *Tx) VerifyNextBlock(b *orchain.Block) (err error) {
     bid := b.Header.ID()
-    state := GetState(t)
+    state := t.GetState()
 
     // Check if no other block has the same id
     // Note: while the chance of this happening is astronomically low, we still check this.
     // SHA256 might get broken at some point in the future.
-    if GetHeaderByID(t, bid) != nil {
+    if t.GetHeaderByID(bid) != nil {
         return errors.New("Block with this ID already exists")
     }
 
@@ -25,7 +24,7 @@ func VerifyNextBlock(t *bolt.Tx, b *orchain.Block) (err error) {
     }
 
     // Check if the difficulty value is correct
-    if Difficulty(t) != b.Header.Difficulty {
+    if t.Difficulty() != b.Header.Difficulty {
         return errors.New("Invalid difficulty value")
     }
 
@@ -36,7 +35,7 @@ func VerifyNextBlock(t *bolt.Tx, b *orchain.Block) (err error) {
 
     // Check if the timestamp is correct
     if state.Length > 0 {
-        previous_header := GetHeaderByID(t, state.Head)
+        previous_header := t.GetHeaderByID(state.Head)
         if b.Header.Timestamp < previous_header.Timestamp {
             return errors.New("Block timestamp is smaller than the previous one")
         }
@@ -62,7 +61,7 @@ func VerifyNextBlock(t *bolt.Tx, b *orchain.Block) (err error) {
 
         // Check if no other transaction has the same ID
         // Note: https://github.com/bitcoin/bips/blob/master/bip-0030.mediawiki
-        if GetTransaction(t, tid) != nil { return errors.New("Transaction ID already in use") }
+        if t.GetTransaction(tid) != nil { return errors.New("Transaction ID already in use") }
         if ! txn_ids.Add(tid) { return errors.New("Duplicate transactions in block") }
 
         if txn_num == 0 { // Check the coinbase transaction
@@ -78,8 +77,8 @@ func VerifyNextBlock(t *bolt.Tx, b *orchain.Block) (err error) {
         // Check transaction inputs
         var sender_address foo.U256
         for i, inp := range txn.Inputs {
-            if GetBillStatus(t, &inp) != UNSPENT { return errors.New("Input bill is already spent or does not exist") }
-            bill := GetBill(t, &inp)
+            if t.GetBillStatus(&inp) != UNSPENT { return errors.New("Input bill is already spent or does not exist") }
+            bill := t.GetBill(&inp)
             utils.Assert(bill != nil)
             if ! to_spend.Add(inp) { return errors.New("Two transactions in a block spend the same bill") }
             if i == 0 {
