@@ -9,6 +9,7 @@ import (
 )
 
 const CONFIG_FILENAME = "config.json"
+const WALLET_DIR = "wallets"
 const DEFAULT_CONFIG =
 `{
     "port": 1984
@@ -36,6 +37,7 @@ func Load(path string) {
 func load(p string) (err error) {
     if cfg.home, err = homedir.Expand(p); err != nil { return err }
     if err = os.MkdirAll(cfg.home, 0755); err != nil { return }
+    if err = os.MkdirAll(Path(WALLET_DIR), 0700); err != nil { return }
     config_path := Path(CONFIG_FILENAME)
     if _, err := os.Stat(config_path); os.IsNotExist(err) {
         writeDefaultConfig()

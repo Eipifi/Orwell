@@ -24,5 +24,6 @@ func main() {
         &command.Stats{},
         &command.Miner{},
         &command.Net{},
+        &command.Wallet{},
     })
 }

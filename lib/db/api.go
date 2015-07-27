@@ -15,4 +15,7 @@ type DB interface {
 
     GetIDByNum(uint64) *foo.U256
     GetNumByID(foo.U256) *uint64
+
+    GetBills(foo.U256) []orchain.BillNumber
+    GetBill(orchain.BillNumber) *orchain.Bill
 }

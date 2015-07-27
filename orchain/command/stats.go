@@ -7,7 +7,7 @@ import (
 type Stats struct{}
 
 func (*Stats) Name() string {
-    return "s"
+    return "stats"
 }
 
 func (*Stats) Run(args []string) error {
