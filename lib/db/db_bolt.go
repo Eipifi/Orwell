@@ -98,7 +98,7 @@ func (b *BoltDB) GetNumByID(id foo.U256) (num *uint64) {
 
 func (b *BoltDB) GetBills(wallet foo.U256) (res []orchain.BillNumber) {
     b.View(func(t *Tx) {
-        res = t.GetUnspentBillsByUser(wallet)
+        res = t.GetUnspentBillsByWallet(wallet)
     })
     return
 }

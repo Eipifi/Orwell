@@ -5,28 +5,28 @@ import (
     "orwell/orchain/miner"
 )
 
-type Miner struct {
+type MinerCmd struct {
     run bool
     miner *miner.Miner
 }
 
-func (m *Miner) Name() string {
+func (c *MinerCmd) Name() string {
     return "mine"
 }
 
-func (m *Miner) Run(args []string) error {
+func (c *MinerCmd) Run(args []string) error {
     if len(args) != 1 { return errors.New("Invalid usage") }
 
-    if m.miner == nil {
-        m.miner = miner.NewMiner(foo.ZERO)
+    if c.miner == nil {
+        c.miner = miner.NewMiner(foo.ZERO)
     }
 
     if args[0] == "start" {
-        m.miner.Run(true)
+        c.miner.Run(true)
     }
 
     if args[0] == "stop" {
-        m.miner.Run(false)
+        c.miner.Run(false)
     }
 
     return nil

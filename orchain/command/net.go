@@ -6,13 +6,13 @@ import (
     "orwell/orchain/serv"
 )
 
-type Net struct{}
+type NetCmd struct{}
 
-func (*Net) Name() string {
+func (*NetCmd) Name() string {
     return "net"
 }
 
-func (n *Net) Run(args []string) error {
+func (n *NetCmd) Run(args []string) error {
     if len(args) == 0 {
         return n.doInfo()
     }
@@ -26,12 +26,12 @@ func (n *Net) Run(args []string) error {
     return errors.New("Unknown command " + c)
 }
 
-func (*Net) doInfo() error {
+func (*NetCmd) doInfo() error {
     fmt.Println("Net stats")
     return nil
 }
 
-func (*Net) doAdd(args []string) error {
+func (*NetCmd) doAdd(args []string) error {
     if len(args) == 0 { return errors.New("Missing arguments for command 'net add'") }
     address := args[0]
     fmt.Printf("Connecting to %v \n", address)

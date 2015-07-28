@@ -11,6 +11,8 @@ func (t *Tx) VerifyNextBlock(b *orchain.Block) (err error) {
     bid := b.Header.ID()
     state := t.GetState()
 
+    // TODO: check timestamp, define the timestamp acceptance policy
+
     // Check if no other block has the same id
     // Note: while the chance of this happening is astronomically low, we still check this.
     // SHA256 might get broken at some point in the future.
@@ -104,6 +106,7 @@ func (t *Tx) VerifyNextBlock(b *orchain.Block) (err error) {
         total_output_sum += txn_output_sum
     }
 
+    // TODO: check for overflows EVERYWHERE
     // The transaction should also generate a reward
     total_input_sum += orchain.GetReward(state.Length)
 

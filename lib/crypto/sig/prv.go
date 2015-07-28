@@ -12,9 +12,10 @@ type PrvKey ecdsa.PrivateKey
 
 func (k *PrvKey) ReadBytes(derBytes []byte) error {
     prv, err := x509.ParseECPrivateKey(derBytes)
+    if err != nil { return err }
     ptr := (*PrvKey)(prv)
     *k = *ptr
-    return err
+    return nil
 }
 
 func (k *PrvKey) WriteBytes() ([]byte, error) {

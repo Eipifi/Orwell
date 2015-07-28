@@ -50,7 +50,7 @@ func (t *Tx) SetBillStatus(num *orchain.BillNumber, status BillStatus) {
     }
 }
 
-func (t *Tx) GetUnspentBillsByUser(user foo.U256) (res []orchain.BillNumber) {
+func (t *Tx) GetUnspentBillsByWallet(user foo.U256) (res []orchain.BillNumber) {
     c := t.tx.Bucket(BUCKET_OWNED).Cursor()
     prefix := user[:]
     for k, _ := c.Seek(prefix); bytes.HasPrefix(k, prefix); k, _ = c.Next() {
