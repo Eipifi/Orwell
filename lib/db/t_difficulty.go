@@ -4,7 +4,7 @@ import (
     "orwell/lib/protocol/orchain"
 )
 
-func (t *Tx) Difficulty() foo.U256 {
+func (t *Tx) GetDifficulty() foo.U256 {
     state := t.GetState()
     num := state.Length
     if num <= 1 { return GENESIS_DIFFICULTY }

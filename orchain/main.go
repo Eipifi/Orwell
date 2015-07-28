@@ -25,6 +25,7 @@ func main() {
         &command.MinerCmd{},
         &command.NetCmd{},
         &command.WalletCmd{},
+        &command.BalanceCmd{},
     })
 }
 

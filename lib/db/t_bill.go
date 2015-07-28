@@ -50,13 +50,20 @@ func (t *Tx) SetBillStatus(num *orchain.BillNumber, status BillStatus) {
     }
 }
 
-func (t *Tx) GetUnspentBillsByWallet(user foo.U256) (res []orchain.BillNumber) {
+func (t *Tx) GetUnspentBillsByWallet(wallet foo.U256) (res []orchain.BillNumber) {
     c := t.tx.Bucket(BUCKET_OWNED).Cursor()
-    prefix := user[:]
+    prefix := wallet[:]
     for k, _ := c.Seek(prefix); bytes.HasPrefix(k, prefix); k, _ = c.Next() {
         num := orchain.BillNumber{}
         butils.ReadAllInto(&num, k[foo.U256_BYTES:])
         res = append(res, num)
+    }
+    return
+}
+
+func (t *Tx) GetBalance(wallet foo.U256) (sum uint64) {
+    for _, inp := range t.GetUnspentBillsByWallet(wallet) {
+        sum += t.GetBill(&inp).Value
     }
     return
 }

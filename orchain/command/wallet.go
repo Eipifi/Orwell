@@ -6,6 +6,7 @@ import (
     "orwell/lib/config"
     "io/ioutil"
     "strings"
+    "orwell/lib/db"
 )
 
 type WalletCmd struct{}
@@ -31,8 +32,13 @@ func (*WalletCmd) List() error {
             w, err := wallet.Load(walletPath(f.Name()))
             if err != nil {
                 fmt.Printf("wallet %v: %v\n", f.Name(), err)
+
             } else {
-                fmt.Printf("    %v\n", w.ID())
+                var balance uint64
+                db.Get().View(func(t *db.Tx) {
+                    balance = t.GetBalance(w.ID())
+                })
+                fmt.Printf("   * %v (balance: %v) \n", w.ID(), balance)
             }
         }
     }

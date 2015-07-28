@@ -26,7 +26,7 @@ func (t *Tx) VerifyNextBlock(b *orchain.Block) (err error) {
     }
 
     // Check if the difficulty value is correct
-    if t.Difficulty() != b.Header.Difficulty {
+    if t.GetDifficulty() != b.Header.Difficulty {
         return errors.New("Invalid difficulty value")
     }
 

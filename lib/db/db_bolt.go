@@ -63,7 +63,7 @@ func (b *BoltDB) State() (state *State) {
 
 func (b *BoltDB) Difficulty() (difficulty foo.U256) {
     b.View(func(t *Tx) {
-        difficulty = t.Difficulty()
+        difficulty = t.GetDifficulty()
     })
     return
 }

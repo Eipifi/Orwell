@@ -21,15 +21,6 @@ func (w *Wallet) ID() foo.U256 {
     return id
 }
 
-func (w *Wallet) Balance() (sum uint64) {
-    db.Get().View(func(t *db.Tx) {
-        for _, inp := range t.GetUnspentBillsByWallet(w.ID()) {
-            sum += t.GetBill(&inp).Value
-        }
-    })
-    return
-}
-
 func (w *Wallet) CreateTransaction(bills []orchain.Bill, fee uint64, label string) (txn *orchain.Transaction, err error) {
     // TODO: check for overflows
     id := w.ID()

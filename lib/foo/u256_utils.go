@@ -9,11 +9,9 @@ func (i *U256) SetBytes(value []byte) {
     }
 }
 
-func FromHex(value string) (result U256) {
+func FromHex(value string) (result U256, err error) {
     buf, err := hex.DecodeString(value)
-    if err != nil {
-        panic(err)
-    }
+    if err != nil { return }
     result.SetBytes(buf)
     return
 }

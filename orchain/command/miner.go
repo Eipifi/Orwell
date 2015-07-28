@@ -3,6 +3,8 @@ import (
     "orwell/lib/foo"
     "errors"
     "orwell/orchain/miner"
+    "fmt"
+    "orwell/lib/cmd"
 )
 
 type MinerCmd struct {
@@ -15,19 +17,17 @@ func (c *MinerCmd) Name() string {
 }
 
 func (c *MinerCmd) Run(args []string) error {
+
     if len(args) != 1 { return errors.New("Invalid usage") }
 
-    if c.miner == nil {
-        c.miner = miner.NewMiner(foo.ZERO)
-    }
+    wallet_id, err := foo.FromHex(args[0])
+    if err != nil { return err }
 
-    if args[0] == "start" {
-        c.miner.Run(true)
-    }
-
-    if args[0] == "stop" {
-        c.miner.Run(false)
-    }
+    miner := miner.StartMiner(wallet_id)
+    fmt.Println("Press ENTER/RETURN to continue")
+    cmd.PressEnterToContinue()
+    miner.Stop()
+    fmt.Println("Stopped")
 
     return nil
 }
