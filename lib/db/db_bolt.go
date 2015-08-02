@@ -34,7 +34,7 @@ func initialize(t *Tx) (err error) {
     if _, err = t.tx.CreateBucketIfNotExists(BUCKET_TXN_UNCONFIRMED); err != nil { return }
     if t.GetState() == nil {
         t.PutState(&State{})
-        utils.Ensure(t.PushBlock(GenesisBlock()))
+        utils.Ensure(t.PushBlock(orchain.GenesisBlock()))
     }
     return
 }

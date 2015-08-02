@@ -7,7 +7,7 @@ import (
 func (t *Tx) GetDifficulty() foo.U256 {
     state := t.GetState()
     num := state.Length
-    if num <= 1 { return GENESIS_DIFFICULTY }
+    if num <= 1 { return orchain.GENESIS_DIFFICULTY }
     head := t.GetHeaderByID(state.Head)
     if num % orchain.BLOCKS_PER_DIFFICULTY_CHANGE == 1 {
         prev := t.GetHeaderByNum(num - 1 - orchain.BLOCKS_PER_DIFFICULTY_CHANGE)
