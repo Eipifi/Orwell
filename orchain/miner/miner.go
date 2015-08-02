@@ -7,6 +7,7 @@ import (
     "math/rand"
     "log"
     "orwell/orchain/serv"
+    "orwell/lib/utils"
 )
 
 type SimpleMiner struct {
@@ -68,6 +69,14 @@ func prepareBlock(wallet foo.U256) (block *orchain.Block) {
                 Label: "Block #" + string(state.Length),
             },
         }
+        block.Transactions = append(block.Transactions, t.UnconfirmedTransactions()...)
+
+        for i := 1; i < len(block.Transactions); i += 1 {
+            fee, err := t.ComputeTransactionFee(&block.Transactions[i])
+            utils.Ensure(err)
+            block.Transactions[0].Outputs[0].Value += fee
+        }
+
         block.ComputeMerkleRoot()
     })
 

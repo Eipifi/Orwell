@@ -7,10 +7,11 @@ import (
     "bytes"
     "orwell/lib/foo"
     "orwell/lib/utils"
+    "orwell/lib/crypto/sig"
 )
 
 const TXN_MAX_OUT uint64 = 128
-const TXN_MAX_IN uint64 = 128
+const TXN_MAX_IN uint64 = 65536
 const LABEL_MAX_LENGTH uint64 = 64
 var ErrArrayTooLarge = errors.New("Array too large")
 
@@ -80,6 +81,13 @@ func (t *Transaction) ID() foo.U256 {
     return id
 }
 
+func (t *Transaction) TotalOutput() (sum uint64) {
+    for _, out := range t.Outputs {
+        sum += out.Value
+    }
+    return
+}
+
 // This method only verifies if the signature correctly signs the transaction head.
 // To ensure the correctness of a transaction, you also need to check if the public key matches the transaction inputs.
 func (t *Transaction) Verify() (err error) {
@@ -87,4 +95,18 @@ func (t *Transaction) Verify() (err error) {
     buf := &bytes.Buffer{}
     if err = t.WriteHead(buf); err != nil { return }
     return t.Proof.Check(buf.Bytes())
+}
+
+func (t *Transaction) Sign(key *sig.PrvKey) (err error) {
+    p := &Proof{}
+    pk := key.PublicPart()
+    p.PublicKey = *pk
+    buf := &bytes.Buffer{}
+    err = t.WriteHead(buf)
+    if err != nil { return }
+    sg, err := key.Sign(buf.Bytes())
+    if err != nil { return }
+    p.Signature = *sg
+    t.Proof = p
+    return
 }

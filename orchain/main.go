@@ -30,6 +30,7 @@ func main() {
         &command.WalletCmd{},
         &command.BalanceCmd{},
         &command.LogCmd{},
+        &command.PayCmd{},
     })
 }
 

@@ -6,9 +6,6 @@ import (
     "orwell/lib/db"
     "orwell/lib/protocol/orchain"
     "errors"
-    "os"
-    "io/ioutil"
-    "encoding/pem"
 )
 
 type Wallet struct {
@@ -28,9 +25,7 @@ func (w *Wallet) CreateTransaction(bills []orchain.Bill, fee uint64, label strin
     txn = &orchain.Transaction{}
     txn.Label = label
     txn.Outputs = bills
-    for _, out := range txn.Outputs {
-        sum_output += out.Value
-    }
+    sum_output = txn.TotalOutput()
     db.Get().View(func(t *db.Tx) {
         txn.Inputs = t.GetUnspentBillsByWallet(id)
         for _, inp := range txn.Inputs {
@@ -44,27 +39,15 @@ func (w *Wallet) CreateTransaction(bills []orchain.Bill, fee uint64, label strin
     if rest > 0 {
         txn.Outputs = append(txn.Outputs, orchain.Bill{id, rest})
     }
+    if err = txn.Sign(&w.key); err != nil { return }
     return
 }
 
-func Load(file string) (*Wallet, error) {
-    w := &Wallet{}
-    file_contents, err := ioutil.ReadFile(file)
-    if err != nil { return nil, err }
-    block, _ := pem.Decode(file_contents)
-    if block == nil { return nil, errors.New("Failed to parse PEM block") }
-    if err = w.key.ReadBytes(block.Bytes); err != nil { return nil, err }
-    return w, nil
-}
-
-func (w *Wallet) Export(file string, perm os.FileMode) error {
-    key_contents, err := w.key.WriteBytes()
-    if err != nil { return err }
-    pem_contents := pem.EncodeToMemory(&pem.Block{
-        Type: "ORWELL PRIVATE KEY",
-        Bytes: key_contents,
+func (w *Wallet) Balance() (balance uint64) {
+    db.Get().View(func(t *db.Tx) {
+        balance = t.GetBalance(w.ID())
     })
-    return ioutil.WriteFile(file, pem_contents, perm)
+    return
 }
 
 func Generate() (w *Wallet) {

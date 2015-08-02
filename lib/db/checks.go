@@ -7,6 +7,11 @@ import (
     "github.com/deckarep/golang-set"
 )
 
+func (t *Tx) ComputeTransactionFee(txn *orchain.Transaction) (uint64, error) {
+    in, out, err := t.VerifyTransaction(txn, false)
+    if err != nil { return 0, err }
+    return in - out, nil
+}
 
 // TODO: triple-check if the output values do not overflow
 func (t *Tx) VerifyTransaction(txn *orchain.Transaction, treat_as_coinbase bool) (input, output uint64, err error) {
