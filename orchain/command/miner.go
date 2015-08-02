@@ -9,7 +9,7 @@ import (
 
 type MinerCmd struct {
     run bool
-    miner *miner.Miner
+    miner *miner.SimpleMiner
 }
 
 func (c *MinerCmd) Name() string {

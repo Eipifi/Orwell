@@ -6,9 +6,6 @@ import (
     "errors"
 )
 
-const MSG_CODE_GET_BLOCK byte = 0x02
-const MSG_CODE_BLOCK byte = 0x82
-
 type MsgGetBlock struct {
     ID foo.U256
 }

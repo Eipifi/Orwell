@@ -5,9 +5,6 @@ import (
     "orwell/lib/foo"
 )
 
-const MSG_CODE_HEAD byte = 0x01
-const MSG_CODE_TAIL byte = 0x81
-
 type MsgHead struct {
     Work foo.U256
     Id foo.U256

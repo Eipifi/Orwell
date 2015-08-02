@@ -16,6 +16,9 @@ func main() {
     // Load the block storage
     db.Initialize(config.Path("chain.bdb"))
 
+    // Run the managers
+    serv.Bootstrap()
+
     // Run server routines
     go serv.RunServer(config.GetInt("port"))
 
@@ -26,6 +29,7 @@ func main() {
         &command.NetCmd{},
         &command.WalletCmd{},
         &command.BalanceCmd{},
+        &command.LogCmd{},
     })
 }
 

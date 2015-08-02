@@ -1,97 +1,75 @@
 package miner
 import (
-    "orwell/lib/protocol/orchain"
-    "time"
-    "math/rand"
-    "orwell/lib/foo"
-    "orwell/lib/timing"
-    "log"
-    "orwell/lib/logging"
     "orwell/lib/db"
+    "orwell/lib/protocol/orchain"
+    "orwell/lib/timing"
+    "orwell/lib/foo"
+    "math/rand"
+    "log"
+    "orwell/orchain/serv"
 )
 
-const MINER_ITERATIONS = 500000
-const MINER_WORKERS = 1
-
-type Miner struct {
-    log *log.Logger
-    target foo.U256
-    objective *orchain.Block
+type SimpleMiner struct {
     run bool
 }
 
-func NewMiner(target foo.U256) *Miner {
-    m := &Miner{}
-    m.log = logging.GetStdLogger("")
-    m.target = target
-    m.Run(false)
-    m.update()
-    for i := 0; i < MINER_WORKERS; i += 1 {
-        go m.work()
-    }
-    go m.apply()
+func StartMiner(wallet foo.U256) (*SimpleMiner) {
+    m := &SimpleMiner{true}
+    go m.work(wallet)
     return m
 }
 
-func (m *Miner) Run(run bool) {
-    m.run = run
-}
-
-func (m *Miner) work() {
-    for {
-        if ! m.run {
-            time.Sleep(time.Second)
-            continue
-        }
-
-        block := *(m.objective)
-        block.Header.Nonce = uint64(rand.Uint32()) << 32
-        for i := 0; i < MINER_ITERATIONS; i += 1 {
-            id := block.Header.ID()
-            if orchain.HashMeetsDifficulty(id, block.Header.Difficulty) {
-                m.deliver(block)
-                break
+func (m *SimpleMiner) work(wallet foo.U256) {
+    for m.run {
+        block := prepareBlock(wallet)
+        if trySign(block, 1000000) {
+            err := serv.SyncMgr().PushBlock(block)
+            if err != nil {
+                log.Printf("Mined block was not saved: %v", err)
+            } else {
+                log.Printf("Mined block %v", block.Header.ID())
             }
-            block.Header.Nonce += 1
         }
     }
 }
 
-func (m *Miner) deliver(block orchain.Block) {
-    err := db.Get().Push(&block)
-    if err == nil {
-        log.Printf("Mined block id=%v df=%v \n", block.Header.ID(), block.Header.Difficulty)
-    } else {
-        log.Printf("Error while applying block: %v", err)
-    }
-    m.update()
+func (m *SimpleMiner) Stop() {
+    m.run = false
 }
 
-func (m *Miner) apply() {
-    for {
-        m.update()
-        time.Sleep(time.Second)
+func trySign(block *orchain.Block, iterations int) bool {
+    block.Header.Nonce = uint64(rand.Uint32()) << 32
+    for i := iterations; i > 0; i -= 1 {
+        id := block.Header.ID()
+        if orchain.HashMeetsDifficulty(id, block.Header.Difficulty) {
+            return true
+        }
+        block.Header.Nonce += 1
     }
+    return false
 }
 
-func (m *Miner) update() {
-    state := db.Get().State()
-    num := state.Length
-    block := orchain.Block{}
-    block.Header.Previous = state.Head
-    block.Header.Timestamp = timestamps.CurrentTimestamp()
-    block.Header.Difficulty = db.Get().Difficulty()
-    block.Transactions = []orchain.Transaction{
-        orchain.Transaction{
-            Outputs: []orchain.Bill {
-                orchain.Bill{
-                    Target: m.target,
-                    Value: orchain.GetReward(num),
+func prepareBlock(wallet foo.U256) (block *orchain.Block) {
+    block = &orchain.Block{}
+
+    db.Get().View(func(t *db.Tx) {
+        state := t.GetState()
+        block.Header.Previous = state.Head
+        block.Header.Timestamp = timestamps.CurrentTimestamp()
+        block.Header.Difficulty = t.GetDifficulty()
+        block.Transactions = []orchain.Transaction{
+            orchain.Transaction{
+                Outputs: []orchain.Bill {
+                    orchain.Bill{
+                        Target: wallet,
+                        Value: orchain.GetReward(state.Length),
+                    },
                 },
+                Label: "Block #" + string(state.Length),
             },
-            Label: "Block #" + string(num),
-        },
-    }
-    block.ComputeMerkleRoot()
-    m.objective = &block
+        }
+        block.ComputeMerkleRoot()
+    })
+
+    return
 }

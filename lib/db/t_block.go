@@ -25,6 +25,7 @@ func (t *Tx) PutBlock(block *orchain.Block, num uint64) {
         t.PutTransaction(&txn)
     }
     t.Put(BUCKET_TXN_LIST, bid[:], buf.Bytes())
+    t.RefreshUnconfirmedTransactions()
 }
 
 func (t *Tx) GetBlock(id foo.U256) (b *orchain.Block) {

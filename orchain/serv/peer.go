@@ -28,15 +28,19 @@ func TalkTo(socket net.Conn) (err error) {
     p.conn = orchain.Connection(socket)
 
     defer p.conn.Close()
-    GetManager().Join(p)
+    ConnMgr().Join(p)
     for {
         err = p.conn.Handle(p.messageHandler)
         if err != nil {
             break
         }
     }
-    GetManager().Leave(p)
+    ConnMgr().Leave(p)
     return nil
+}
+
+func (p *Peer) Close() {
+    p.conn.Close()
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -46,10 +50,9 @@ func TalkTo(socket net.Conn) (err error) {
 func (p *Peer) messageHandler(msg obp.Msg) (rsp obp.Msg, err error) {
 
     switch req := msg.(type) {
-        case *orchain.MsgHead:
-            return p.handleMsgHead(req)
-        case *orchain.MsgGetBlock:
-            return p.handleMsgGetBlock(req)
+        case *orchain.MsgHead:      return p.handleMsgHead(req)
+        case *orchain.MsgGetBlock:  return p.handleMsgGetBlock(req)
+        case *orchain.MsgGetTxns:   return p.handleGetTxns(req)
     }
 
     return nil, errors.New("Unknown message type")
@@ -93,6 +96,14 @@ func (p *Peer) handleMsgGetBlock(req *orchain.MsgGetBlock) (rsp *orchain.MsgBloc
     return &orchain.MsgBlock{db.Get().GetBlockByID(req.ID)}, nil
 }
 
+func (p *Peer) handleGetTxns(req *orchain.MsgGetTxns) (rsp *orchain.MsgTxns, err error) {
+    rsp = &orchain.MsgTxns{}
+    db.Get().View(func(t *db.Tx) {
+        rsp.Transactions = t.UnconfirmedTransactions()
+    })
+    return
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -131,10 +142,14 @@ func (p *Peer) AskBlock(id foo.U256) (*orchain.MsgBlock, error) {
     return nil, ErrInvalidResponse
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-func (p *Peer) Close() {
-    p.conn.Close()
+func (p *Peer) AskTxns() (*orchain.MsgTxns, error) {
+    rsp, err := p.conn.Query(&orchain.MsgGetTxns{})
+    if err != nil { return nil, err }
+    rsp_cast,  ok := rsp.(*orchain.MsgTxns)
+    if ok { return rsp_cast, nil }
+    return nil, ErrInvalidResponse
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -31,6 +31,7 @@ func initialize(t *Tx) (err error) {
     if _, err = t.tx.CreateBucketIfNotExists(BUCKET_HID_NUM); err != nil { return }
     if _, err = t.tx.CreateBucketIfNotExists(BUCKET_NUM_HID); err != nil { return }
     if _, err = t.tx.CreateBucketIfNotExists(BUCKET_TXN_LIST); err != nil { return }
+    if _, err = t.tx.CreateBucketIfNotExists(BUCKET_TXN_UNCONFIRMED); err != nil { return }
     if t.GetState() == nil {
         t.PutState(&State{})
         utils.Ensure(t.PushBlock(GenesisBlock()))

@@ -16,6 +16,12 @@ func (t *Tx) Del(bucket, key []byte) {
     utils.Ensure(t.tx.Bucket(bucket).Delete(key))
 }
 
+func (t *Tx) DeleteAll(bucket []byte) {
+    utils.Ensure(t.tx.DeleteBucket(bucket))
+    _, err := t.tx.CreateBucket(bucket)
+    utils.Ensure(err)
+}
+
 func (t *Tx) Read(bucket, key []byte, target butils.Readable) bool {
     data := t.Get(bucket, key)
     if data == nil { return false }
