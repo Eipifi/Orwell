@@ -18,6 +18,7 @@ func getMerkleRoot(txns []Transaction) (hash foo.U256, err error) {
         h[i], err = txns[i].TryID()
         if err != nil { return }
     }
+    // TODO: also include domains
     return merkle.Compute(h), nil
 }
 

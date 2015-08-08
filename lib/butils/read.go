@@ -75,7 +75,7 @@ func ReadVarUint(r io.Reader) (uint64, error) {
 func ReadVarBytes(r io.Reader, limit uint64) ([]byte, error) {
     l, err := ReadVarUint(r);
     if err != nil { return nil, err }
-    if l > limit { return nil, ErrLimitExceeded }
+    if l >= limit { return nil, ErrLimitExceeded }
     return ReadAllocate(r, l)
 }
 

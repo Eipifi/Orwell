@@ -23,6 +23,7 @@ func GenesisBlock() (b *Block) {
             Label: "TODO: wymyślić fajny label",
         },
     }
+    b.Domains = []Domain{}
     utils.Ensure(b.ComputeMerkleRoot())
     // TODO: make a hash check
     return
