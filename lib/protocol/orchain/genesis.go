@@ -20,7 +20,7 @@ func GenesisBlock() (b *Block) {
                     Value: GetReward(0),
                 },
             },
-            Label: "TODO: wymyślić fajny label",
+            Payload: PayloadLabelString("TODO: come up with a funny genesis label"),
         },
     }
     b.Domains = []Domain{}

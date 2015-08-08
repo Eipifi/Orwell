@@ -12,25 +12,23 @@ import (
 
 const TXN_MAX_OUT uint64 = 128
 const TXN_MAX_IN uint64 = 65536 // TODO: do something about it
-const LABEL_MAX_LENGTH uint64 = 64
-var ErrArrayTooLarge = errors.New("Array too large")
 
 type Transaction struct {
-    Label string
+    Payload Payload
     Inputs []BillNumber
     Outputs []Bill
     Proof *Proof // optional - coinbase transactions do not have proofs
 }
 
 func (t *Transaction) ReadHead(r io.Reader) (err error) {
-    if t.Label, err = butils.ReadString(r, LABEL_MAX_LENGTH); err != nil { return }
+    if err = t.Payload.Read(r); err != nil { return }
     if err = butils.ReadSlice(r, TXN_MAX_IN, &t.Inputs); err != nil { return }
     if err = butils.ReadSlice(r, TXN_MAX_OUT, &t.Outputs); err != nil { return }
     return
 }
 
 func (t *Transaction) WriteHead(w io.Writer) (err error) {
-    if err = butils.WriteString(w, t.Label, LABEL_MAX_LENGTH); err != nil { return }
+    if err = t.Payload.Write(w); err != nil { return }
     if err = butils.WriteSlice(w, TXN_MAX_IN, t.Inputs); err != nil { return }
     if err = butils.WriteSlice(w, TXN_MAX_OUT, t.Outputs); err != nil { return }
     return

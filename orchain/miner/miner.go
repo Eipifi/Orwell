@@ -66,7 +66,7 @@ func prepareBlock(wallet foo.U256) (block *orchain.Block) {
                         Value: orchain.GetReward(state.Length),
                     },
                 },
-                Label: "Block #" + string(state.Length),
+                Payload: orchain.PayloadLabelString("Block #" + string(state.Length)),
             },
         }
         block.Transactions = append(block.Transactions, t.UnconfirmedTransactions()...)

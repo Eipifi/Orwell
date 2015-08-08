@@ -18,12 +18,11 @@ func (w *Wallet) ID() foo.U256 {
     return id
 }
 
-func (w *Wallet) CreateTransaction(bills []orchain.Bill, fee uint64, label string) (txn *orchain.Transaction, err error) {
+func (w *Wallet) CreateTransaction(bills []orchain.Bill, fee uint64) (txn *orchain.Transaction, err error) {
     // TODO: check for overflows
     id := w.ID()
     var sum_input, sum_output uint64
     txn = &orchain.Transaction{}
-    txn.Label = label
     txn.Outputs = bills
     sum_output = txn.TotalOutput()
     db.Get().View(func(t *db.Tx) {
