@@ -49,7 +49,10 @@ func (m *SyncManager) PushBlock(block *orchain.Block) (err error) {
 
 func (m *SyncManager) syncBlocks(peer *Peer) (err error) {
     rsp := &orchain.MsgTail{}
-    state := db.Get().State()
+    var state *db.State
+    db.Get().View(func(t *db.Tx) {
+        state = t.GetState()
+    })
     var revert uint64 = 1
     for len(rsp.Headers) == 0 {
         if rsp, err = peer.AskHead(revert); err != nil { return }

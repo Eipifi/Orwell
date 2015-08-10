@@ -6,9 +6,12 @@ var KEY_STATE = []byte("state")
 func (t *Tx) GetState() (s *State) {
     s = &State{}
     if t.Read(BUCKET_INFO, KEY_STATE, s) { return }
-    return nil
+    return &State{}
 }
 
 func (t *Tx) PutState(s *State) {
     t.Write(BUCKET_INFO, KEY_STATE, s)
 }
+
+
+

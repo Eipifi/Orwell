@@ -72,21 +72,3 @@ func (t *Tx) GetNumByID(id foo.U256) (num *uint64) {
     res := butils.BytesToUint64(data)
     return &res
 }
-
-func (t *Tx) DelBlock(id foo.U256) {
-    num_bytes := t.Get(BUCKET_HID_NUM, id[:])
-    tids := t.Get(BUCKET_TXN_LIST, id[:])
-    t.Del(BUCKET_NUM_HID, num_bytes)
-    t.Del(BUCKET_HID_NUM, id[:])
-    t.Del(BUCKET_HEADER, id[:])
-    t.Del(BUCKET_TXN_LIST, id[:])
-    buf := bytes.NewBuffer(tids)
-    for {
-        var tid foo.U256
-        err := tid.Read(buf)
-        if err == io.EOF { break }
-        utils.Ensure(err)
-        t.DelTransaction(tid)
-    }
-    return
-}

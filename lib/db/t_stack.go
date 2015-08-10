@@ -4,11 +4,13 @@ import (
 )
 
 func (t *Tx) PushBlock(block *orchain.Block) error {
+    bid := block.Header.ID()
+    t.session = &bid
     if err := t.VerifyNextBlock(block); err != nil { return err }
     s := t.GetState()
     t.PutBlock(block, s.Length)
     s.Length += 1
-    s.Head = block.Header.ID()
+    s.Head = bid
     s.Work = s.Work.Plus(block.Header.Difficulty)
     t.PutState(s)
     return nil
@@ -17,10 +19,5 @@ func (t *Tx) PushBlock(block *orchain.Block) error {
 func (t *Tx) PopBlock() {
     s := t.GetState()
     if s.Length == 1 { panic("Can not remove the genesis block") }
-    h := t.GetHeaderByID(s.Head)
-    t.DelBlock(s.Head)
-    s.Length -= 1
-    s.Head = h.Previous
-    s.Work = s.Work.Minus(h.Difficulty)
-    t.PutState(s)
+    t.Rollback(s.Head)
 }

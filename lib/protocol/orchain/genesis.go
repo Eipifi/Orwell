@@ -5,6 +5,10 @@ import (
 )
 
 var GENESIS_DIFFICULTY foo.U256 = foo.ZERO
+const BLOCKS_PER_DIFFICULTY_CHANGE = 32
+const SECONDS_PER_BLOCK = 10
+const DIFFICULTY_FACTOR = 4
+const BLOCKS_UNTIL_DOMAIN_CONFIRMED uint64 = 8
 
 func GenesisBlock() (b *Block) {
     b = &Block{}

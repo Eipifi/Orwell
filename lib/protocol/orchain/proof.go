@@ -2,6 +2,7 @@ package orchain
 import (
     "orwell/lib/crypto/sig"
     "io"
+    "orwell/lib/butils"
 )
 
 type Proof struct {
@@ -23,4 +24,10 @@ func (p *Proof) Write(w io.Writer) (err error) {
 
 func (p *Proof) Check(data []byte) error {
     return p.PublicKey.Verify(data, &(p.Signature))
+}
+
+func (p *Proof) CheckObject(w butils.Writable) error {
+    data, err := butils.WriteToBytes(w)
+    if err != nil { return err }
+    return p.Check(data)
 }

@@ -8,7 +8,7 @@ import (
 const DOMAIN_MAX_LENGTH uint64 = 32
 
 type Domain struct {
-    Name string
+    Name string // TODO: perform lexical checks, ensure no special chars and whitespaces
     Owner foo.U256
     ValidUntil uint64
 }

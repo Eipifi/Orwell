@@ -65,35 +65,37 @@ func (p *Peer) handleMsgHead(req *orchain.MsgHead) (rsp *orchain.MsgTail, err er
     //        - I have more work, but I do not know your head block   // hi work, no headers
     //        - I have less, can't help ya                            // lo work, no headers
 
-    state := db.Get().State()
-
     rsp = &orchain.MsgTail{}
-    rsp.Work = state.Work
+    db.Get().View(func(t *db.Tx) {
+        state := t.GetState()
+        rsp.Work = state.Work
+        cmp := foo.Compare(req.Work, rsp.Work)
 
-    cmp := foo.Compare(req.Work, rsp.Work)
+        if cmp < 0 {
+            // we have more - wonder if we can help here
+            num_ptr := t.GetNumByID(req.Id)
 
-    if cmp >= 0 {
-        // remote side has more work, we can't help
-        return
-    } else {
-        // we have more - wonder if we can help here
-        num_ptr := db.Get().GetNumByID(req.Id)
+            // If the header is not known, we can't send any subsequent headers
+            if num_ptr == nil { return }
 
-        // If the header is not known, we can't send any subsequent headers
-        if num_ptr == nil { return }
-
-        // But if we already know this header, we can help - let's send the rest
-        for num := 1 + *num_ptr; num < state.Length; num += 1 {
-            header := db.Get().GetHeaderByNum(num)
-            if header == nil { break }
-            rsp.Headers = append(rsp.Headers, *header)
+            // But if we already know this header, we can help - let's send the rest
+            for num := 1 + *num_ptr; num < state.Length; num += 1 {
+                header := t.GetHeaderByNum(num)
+                if header == nil { break }
+                rsp.Headers = append(rsp.Headers, *header)
+            }
         }
-    }
+        return
+    })
     return
 }
 
 func (p *Peer) handleMsgGetBlock(req *orchain.MsgGetBlock) (rsp *orchain.MsgBlock, err error) {
-    return &orchain.MsgBlock{db.Get().GetBlockByID(req.ID)}, nil
+    rsp = &orchain.MsgBlock{}
+    db.Get().View(func(t *db.Tx) {
+        rsp.Block = t.GetBlock(req.ID)
+    })
+    return
 }
 
 func (p *Peer) handleGetTxns(req *orchain.MsgGetTxns) (rsp *orchain.MsgTxns, err error) {
@@ -113,19 +115,23 @@ var ErrInvalidResponse = errors.New("Invalid response type")
 func (p *Peer) AskHead(revert uint64) (*orchain.MsgTail, error) {
     utils.Assert(revert >= 1)
 
-    state := db.Get().State()
     req := &orchain.MsgHead{}
-    req.Work = state.Work
+    db.Get().View(func(t *db.Tx){
+        state := t.GetState()
+        req.Work = state.Work
 
-    num := state.Length
-    if revert > num {
-        num = 0
-    } else {
-        num -= revert
-    }
-    id := db.Get().GetIDByNum(num)
-    utils.Assert(id != nil)
-    req.Id = *id
+        num := state.Length
+        if revert > num {
+            num = 0
+        } else {
+            num -= revert
+        }
+
+        id := t.GetIDByNum(num)
+        utils.Assert(id != nil)
+        req.Id = *id
+    })
+
 
     rsp, err := p.conn.Query(req)
     if err != nil { return nil, err }

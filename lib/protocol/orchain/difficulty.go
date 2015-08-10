@@ -1,10 +1,6 @@
 package orchain
 import "orwell/lib/foo"
 
-const BLOCKS_PER_DIFFICULTY_CHANGE = 32
-const SECONDS_PER_BLOCK = 10
-const DIFFICULTY_FACTOR = 4
-
 func DifficultyToTarget(difficulty foo.U256) foo.U256 {
     if difficulty == foo.ZERO || difficulty == foo.ONE {
         return foo.MAX
