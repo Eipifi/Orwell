@@ -57,7 +57,7 @@ func prepareBlock(wallet foo.U256) (block *orchain.Block) {
         state := t.GetState()
         block.Header.Previous = state.Head
         block.Header.Timestamp = timestamps.CurrentTimestamp()
-        block.Header.Difficulty = t.GetDifficulty()
+        block.Header.Difficulty = t.GetDifficulty(state.Length)
         block.Transactions = []orchain.Transaction{
             orchain.Transaction{
                 Outputs: []orchain.Bill {
