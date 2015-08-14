@@ -31,7 +31,7 @@ func CheckTxnsBalance(t *Tx, txns []orchain.Transaction) (err error) {
 
     for _, txn := range txns {
         // TODO: check for overflows
-        inp, out := t.ComputeBalance(&txn)
+        inp, out := t.ComputeTxnInpOut(&txn)
         total_input_sum += inp
         total_output_sum += out
     }

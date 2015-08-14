@@ -6,6 +6,8 @@ import (
 
 type U64 uint64
 
+const U64_MAX uint64 = 18446744073709551615
+
 func (u *U64) Read(r io.Reader) error {
     val, err := butils.ReadUint64(r)
     if err != nil { return err }

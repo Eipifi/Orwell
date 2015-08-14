@@ -4,7 +4,7 @@ import (
     "orwell/lib/utils"
 )
 
-func (t *Tx) ComputeBalance(txn *orchain.Transaction) (input, output uint64) {
+func (t *Tx) ComputeTxnInpOut(txn *orchain.Transaction) (input, output uint64) {
     // TODO: check for overflows
     for _, inp := range txn.Inputs {
         bill := t.GetBill(&inp)
@@ -16,8 +16,14 @@ func (t *Tx) ComputeBalance(txn *orchain.Transaction) (input, output uint64) {
     return
 }
 
+func (t *Tx) ComputeFee(txn *orchain.Transaction) uint64 {
+    inp, out := t.ComputeTxnInpOut(txn)
+    utils.Assert(inp >= out)
+    return inp - out
+}
+
 func (t *Tx) ComputeTransactionFee(txn *orchain.Transaction) (uint64, error) {
-    in, out := t.ComputeBalance(txn)
+    in, out := t.ComputeTxnInpOut(txn)
     utils.Assert(in >= out)
     return in - out, nil
 }

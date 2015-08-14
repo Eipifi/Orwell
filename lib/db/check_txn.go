@@ -48,7 +48,7 @@ func CheckTxnNoDoubleSpend(t *Tx, txn *orchain.Transaction, is_first bool) error
 
 func CheckTxnBalance(t *Tx, txn *orchain.Transaction, is_first bool) (err error) {
     if ! is_first {
-        input, output := t.ComputeBalance(txn)
+        input, output := t.ComputeTxnInpOut(txn)
         if output > input { return errors.New("Transaction output must not be greater then its input") }
     }
     return
