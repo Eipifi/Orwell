@@ -77,6 +77,7 @@ func prepareBlock(wallet foo.U256) (block *orchain.Block) {
             block.Transactions[0].Outputs[0].Value += fee
         }
 
+        block.Domains = t.DomainsToRegister(block.Transactions)
         block.ComputeMerkleRoot()
     })
 

@@ -63,6 +63,7 @@ var header_checks []HeaderCheck = []HeaderCheck{
 
 var block_checks []BlockCheck = []BlockCheck{
     CheckBlockMerkleRoot,
+    CheckBlockHasAllDomains,
 }
 
 var txn_checks []TxnCheck = []TxnCheck{
@@ -71,12 +72,15 @@ var txn_checks []TxnCheck = []TxnCheck{
     CheckTxnInputsUnspent,
     CheckTxnNoDoubleSpend,
     CheckTxnBalance,
+    CheckTxnPayload,
 }
 
 var txns_checks []TxnsCheck = []TxnsCheck{
     CheckTxnsNoDuplicateTxns,
     CheckTxnsNoDoubleSpend,
     CheckTxnsBalance,
+    CheckTxnsTicketLimitNotExceeded,
+    CheckTxnsNoDuplicateTickets,
 }
 
 var domain_checks []DomainCheck = []DomainCheck{}

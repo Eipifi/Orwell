@@ -34,6 +34,9 @@ func initialize(t *Tx) (err error) {
     if _, err = t.tx.CreateBucketIfNotExists(BUCKET_HID_NUM); err != nil { return }
     if _, err = t.tx.CreateBucketIfNotExists(BUCKET_TXN_LIST); err != nil { return }
     if _, err = t.tx.CreateBucketIfNotExists(BUCKET_TXN_UNCONFIRMED); err != nil { return }
+    if _, err = t.tx.CreateBucketIfNotExists(BUCKET_DOMAIN); err != nil { return }
+    if _, err = t.tx.CreateBucketIfNotExists(BUCKET_REGISTERED_DOMAIN); err != nil { return }
+    if _, err = t.tx.CreateBucketIfNotExists(BUCKET_TICKET); err != nil { return }
     state := t.GetState()
     if state.Length == 0 {
         utils.Ensure(t.PushBlock(orchain.GenesisBlock()))

@@ -47,3 +47,28 @@ func CheckTxnsBalance(t *Tx, txns []orchain.Transaction) (err error) {
 
     return nil
 }
+
+func CheckTxnsTicketLimitNotExceeded(t *Tx, txns []orchain.Transaction) error {
+    var tickets uint64 = 0
+    for _, txn := range txns {
+        if txn.Payload.Ticket != nil {
+            tickets += 1
+        }
+    }
+    if tickets >= t.AllowedTickets() {
+        return errors.New("Too many tickets in a block")
+    }
+    return nil
+}
+
+func CheckTxnsNoDuplicateTickets(t *Tx, txns []orchain.Transaction) error {
+    tickets := mapset.NewSet()
+    for _, txn := range txns {
+        if txn.Payload.Ticket != nil {
+            if ! tickets.Add(*txn.Payload.Ticket) {
+                return errors.New("Duplicate tickets in block")
+            }
+        }
+    }
+    return nil
+}

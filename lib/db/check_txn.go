@@ -18,8 +18,7 @@ func CheckTxnProof(t *Tx, txn *orchain.Transaction, is_first bool) error {
     } else {
         if txn.Proof == nil { return errors.New("The transaction lacks a proof") }
         if err := txn.Verify(); err != nil { return err }
-        sender_id, err := txn.Proof.PublicKey.ID()
-        if err != nil { return err }
+        sender_id := txn.Proof.PublicKey.ID()
         for _, inp := range txn.Inputs {
             bill := t.GetBill(&inp)
             if bill.Target != sender_id { return errors.New("Transaction tries to spend somebody else's bill") }
@@ -50,6 +49,16 @@ func CheckTxnBalance(t *Tx, txn *orchain.Transaction, is_first bool) (err error)
     if ! is_first {
         input, output := t.ComputeTxnInpOut(txn)
         if output > input { return errors.New("Transaction output must not be greater then its input") }
+    }
+    return
+}
+
+func CheckTxnPayload(t *Tx, txn *orchain.Transaction, is_first bool) (err error) {
+    if txn.Payload.Label != nil { return }      // nothing to check here, every label is OK
+    if txn.Payload.Ticket != nil { return }     // also nothing, every ticket is ok (as long as it is paid for)
+    if txn.Payload.Domain != nil { return }     // domain can repeat and appear at any place. It is in the user's interest to announce it late.
+    if txn.Payload.Transfer != nil {
+        if ! t.IsTransferLegal(txn.Payload.Transfer) { return errors.New("Illegal domain transfer") }
     }
     return
 }

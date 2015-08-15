@@ -13,7 +13,7 @@ type Wallet struct {
 }
 
 func (w *Wallet) ID() foo.U256 {
-    id, err := w.key.PublicPart().ID()
+    id, err := w.key.PublicPart().TryID()
     utils.Ensure(err)
     return id
 }

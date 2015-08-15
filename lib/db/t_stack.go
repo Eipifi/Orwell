@@ -9,6 +9,9 @@ func (t *Tx) PushBlock(block *orchain.Block) error {
     if err := t.ValidateNewBlock(block); err != nil { return err }
     s := t.GetState()
     t.PutBlock(block, s.Length)
+    for _, domain := range block.Domains {
+        t.RegisterDomain(&domain)
+    }
     s.Length += 1
     s.Head = bid
     s.Work = s.Work.Plus(block.Header.Difficulty)

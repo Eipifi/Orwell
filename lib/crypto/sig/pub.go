@@ -7,6 +7,7 @@ import (
     "io"
     "orwell/lib/butils"
     "orwell/lib/foo"
+    "orwell/lib/utils"
 )
 
 const PUBKEY_MAX_LENGTH uint64 = 4096
@@ -38,8 +39,14 @@ func (k *PubKey) Verify(payload []byte, s *Signature) error {
     return errors.New("Invalid signature")
 }
 
-func (k *PubKey) ID() (id foo.U256, err error) {
+func (k *PubKey) TryID() (id foo.U256, err error) {
     buf, err := butils.WriteToBytes(k)
     if err == nil { id = hash.Hash(buf) }
     return
+}
+
+func (k *PubKey) ID() foo.U256 {
+    id, err := k.TryID()
+    utils.Ensure(err)
+    return id
 }
