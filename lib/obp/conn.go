@@ -6,6 +6,7 @@ import (
     "sync"
     "log"
     "orwell/lib/logging"
+    "fmt"
 )
 
 type Handler func([]byte) ([]byte, error)
@@ -129,4 +130,8 @@ func (c *Conn) Handle(handler Handler) error {
 func maybeWrite(c chan *Frame, f *Frame) {
     defer func() { recover() }()
     c <- f
+}
+
+func (c *Conn) Info() string {
+    return fmt.Sprintf("%v", c.socket.RemoteAddr())
 }

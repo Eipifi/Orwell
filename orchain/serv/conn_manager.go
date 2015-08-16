@@ -20,6 +20,13 @@ func (m *ConnManager) Leave(peer *Peer) {
     m.peers.Remove(peer)
 }
 
+func (m *ConnManager) GetAllPeers() (peers []*Peer) {
+    for _, p := range m.peers.ToSlice() {
+        peers = append(peers, p.(*Peer))
+    }
+    return
+}
+
 func (m *ConnManager) GetRandomPeers(num int) []*Peer {
     peers := m.peers.ToSlice()
     if num > len(peers) {

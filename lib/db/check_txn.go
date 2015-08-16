@@ -21,6 +21,7 @@ func CheckTxnProof(t *Tx, txn *orchain.Transaction, is_first bool) error {
         sender_id := txn.Proof.PublicKey.ID()
         for _, inp := range txn.Inputs {
             bill := t.GetBill(&inp)
+            if bill == nil { return errors.New("Input bill is already spent or does not exist") }
             if bill.Target != sender_id { return errors.New("Transaction tries to spend somebody else's bill") }
         }
     }

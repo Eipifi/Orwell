@@ -23,11 +23,8 @@ func (m *SyncManager) syncLoop() {
     for {
         peers := ConnMgr().GetRandomPeers(1)
         if len(peers) > 0 {
-            err := m.syncBlocks(peers[0])
-            if err != nil {
+            if err := m.sync(peers[0]); err != nil {
                 peers[0].Close()
-            } else {
-
             }
         }
         interval := SYNC_MIN_PERIOD + rand.Intn(SYNC_MAX_PERIOD - SYNC_MIN_PERIOD)
@@ -95,11 +92,19 @@ func (m *SyncManager) syncTxns(peer *Peer) (error) {
     if err != nil { return err }
     db.Get().Update(func(t *db.Tx) {
         for _, txn := range rsp.Transactions {
-            err = t.MaybeStoreUnconfirmedTransaction(&txn)
+            if err = t.MaybeStoreUnconfirmedTransaction(&txn); err != nil {
+                m.log.Printf("Received txn not stored: %v", err)
+            }
             // TODO: maybe log the errors?
         }
     })
     return nil
+}
+
+func (m *SyncManager) sync(peer *Peer) (err error) {
+    if err = m.syncBlocks(peer); err != nil { return }
+    if err = m.syncTxns(peer); err != nil { return }
+    return
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

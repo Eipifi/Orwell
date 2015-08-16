@@ -13,12 +13,12 @@ func Import(file string) (*Wallet, error) {
     if err != nil { return nil, err }
     block, _ := pem.Decode(file_contents)
     if block == nil { return nil, errors.New("Failed to parse PEM block") }
-    if err = w.key.ReadBytes(block.Bytes); err != nil { return nil, err }
+    if err = w.PrvKey.ReadBytes(block.Bytes); err != nil { return nil, err }
     return w, nil
 }
 
 func (w *Wallet) Export(file string) error {
-    key_contents, err := w.key.WriteBytes()
+    key_contents, err := w.PrvKey.WriteBytes()
     if err != nil { return err }
     pem_contents := pem.EncodeToMemory(&pem.Block{
         Type: "ORWELL PRIVATE KEY",

@@ -98,7 +98,7 @@ func SendHandler() fcli.Result {
                 if w.ID() == registered_domain.Owner {
                     transfer := orchain.Transfer{}
                     transfer.Domain = domain
-                    transfer.Proof.Sign(&domain, w.PrvKey())
+                    transfer.Proof.Sign(&domain, &w.PrvKey)
                     txn.Payload = orchain.PayloadTransfer(transfer)
                     return nil
                 }
@@ -110,7 +110,7 @@ func SendHandler() fcli.Result {
     fsm.On("main", "prepare", func() fcli.Result {
         remaining := sum_input - txn.TotalOutput() - fee
         txn.Outputs = append(txn.Outputs, orchain.Bill{w.ID(), remaining})
-        err := txn.Sign(w.PrvKey())
+        err := txn.Sign(&w.PrvKey)
         if err != nil { return fcli.Exit(err) }
         fmt.Println("Prepared transaction:")
         print_txn()

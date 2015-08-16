@@ -15,3 +15,11 @@ func NetAddHandler(address string) fcli.Result {
     }
     return err
 }
+
+func NetStatsHandler() fcli.Result {
+    fmt.Println("Connected peers:")
+    for _, peer := range serv.ConnMgr().GetAllPeers() {
+        fmt.Println(peer.Info())
+    }
+    return nil
+}

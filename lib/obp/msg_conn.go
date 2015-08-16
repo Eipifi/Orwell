@@ -21,6 +21,10 @@ func (c *MsgConn) Close() {
     c.conn.Close()
 }
 
+func (c *MsgConn) Info() string {
+    return c.conn.Info()
+}
+
 func (c *MsgConn) Query(request Msg) (rsp Msg, err error) {
     buf, err := c.encoder(request)
     if err != nil { return }
