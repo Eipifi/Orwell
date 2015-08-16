@@ -5,6 +5,7 @@ import (
     "encoding/hex"
 )
 
+const U64_MAX uint64 = 18446744073709551615
 const U256_BITS = 256
 const U256_BYTES = U256_BITS / 8
 
