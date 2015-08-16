@@ -4,7 +4,6 @@ import (
     "errors"
     "orwell/lib/butils"
     "orwell/lib/crypto/hash"
-    "bytes"
     "orwell/lib/foo"
     "orwell/lib/utils"
     "orwell/lib/crypto/sig"
@@ -17,7 +16,7 @@ type Transaction struct {
     Payload Payload
     Inputs []BillNumber
     Outputs []Bill
-    Proof *Proof // optional - coinbase transactions do not have proofs
+    Proof *sig.Proof // optional - coinbase transactions do not have proofs
 }
 
 func (t *Transaction) ReadHead(r io.Reader) (err error) {
@@ -37,7 +36,7 @@ func (t *Transaction) WriteHead(w io.Writer) (err error) {
 func (t *Transaction) Read(r io.Reader) (err error) {
     if err = t.ReadHead(r); err != nil { return }
     var flag byte
-    proof := &Proof{}
+    proof := &sig.Proof{}
     if flag, err = butils.ReadOptional(r, proof); err != nil { return }
     if flag != 0x00 { t.Proof = proof }
     return
@@ -69,21 +68,10 @@ func (t *Transaction) TotalOutput() (sum uint64) {
 // To ensure the correctness of a transaction, you also need to check if the public key matches the transaction inputs.
 func (t *Transaction) Verify() (err error) {
     if t.Proof == nil { return errors.New("Proof missing (valid only for generation transaction)") }
-    buf := &bytes.Buffer{}
-    if err = t.WriteHead(buf); err != nil { return }
-    return t.Proof.Check(buf.Bytes())
+    return t.Proof.CheckHead(t)
 }
 
 func (t *Transaction) Sign(key *sig.PrvKey) (err error) {
-    p := &Proof{}
-    pk := key.PublicPart()
-    p.PublicKey = *pk
-    buf := &bytes.Buffer{}
-    err = t.WriteHead(buf)
-    if err != nil { return }
-    sg, err := key.Sign(buf.Bytes())
-    if err != nil { return }
-    p.Signature = *sg
-    t.Proof = p
-    return
+    t.Proof = &sig.Proof{}
+    return t.Proof.SignHead(t, key)
 }

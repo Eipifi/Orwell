@@ -4,11 +4,12 @@ import (
     "orwell/lib/foo"
     "errors"
     "fmt"
+    "orwell/lib/crypto/sig"
 )
 
 type Transfer struct {
     Domain Domain
-    Proof Proof
+    Proof sig.Proof
 }
 
 func (t *Transfer) Read(r io.Reader) (err error) {
@@ -25,7 +26,7 @@ func (t *Transfer) Write(w io.Writer) (err error) {
 
 func (t *Transfer) Verify(owner foo.U256) (err error) {
     if t.Domain.Owner != owner { return errors.New("Invalid domain owner") }
-    return t.Proof.CheckObject(&t.Domain)
+    return t.Proof.CheckWritable(&t.Domain)
 }
 
 func (t *Transfer) String() string {

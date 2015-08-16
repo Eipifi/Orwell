@@ -1,4 +1,4 @@
-package cmds
+package cmd
 import (
     "orwell/lib/fcli"
     "orwell/lib/wallet"
@@ -98,7 +98,7 @@ func SendHandler() fcli.Result {
                 if w.ID() == registered_domain.Owner {
                     transfer := orchain.Transfer{}
                     transfer.Domain = domain
-                    transfer.Proof.Sign(&domain, &w.PrvKey)
+                    transfer.Proof.SignWritable(&domain, &w.PrvKey)
                     txn.Payload = orchain.PayloadTransfer(transfer)
                     return nil
                 }

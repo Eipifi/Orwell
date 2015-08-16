@@ -1,4 +1,4 @@
-package cmds
+package cmd
 import (
     "orwell/lib/fcli"
     "orwell/lib/foo"

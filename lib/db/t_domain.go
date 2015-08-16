@@ -94,7 +94,7 @@ func (t *Tx) DomainsToRegister(txns []orchain.Transaction) (domains []orchain.Do
 }
 
 func (t *Tx) IsTransferLegal(transfer *orchain.Transfer) bool {
-    if transfer.Proof.CheckObject(&transfer.Domain) != nil { return false }
+    if transfer.Proof.CheckWritable(&transfer.Domain) != nil { return false }
     reg_domain := t.GetValidRegisteredDomain(transfer.Domain.Name)
     if reg_domain == nil { return false }
     return reg_domain.Owner == transfer.Proof.PublicKey.ID()

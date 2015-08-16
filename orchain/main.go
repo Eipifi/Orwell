@@ -5,7 +5,7 @@ import (
     "orwell/orchain/serv"
     "orwell/lib/db"
     "orwell/lib/fcli"
-    "orwell/orchain/cmds"
+    "orwell/orchain/cmd"
 )
 
 func main() {
@@ -25,16 +25,16 @@ func main() {
     // Run the command-line finite state machine
     fsm := fcli.NewFSM("> ")
 
-    fsm.On("main", "stats", cmds.StatsHandler)
-    fsm.On("main", "s", cmds.StatsHandler)
-    fsm.On("main", "balance $U256", cmds.BalanceHandler)
-    fsm.On("main", "mine $U256", cmds.MinerHandler)
-    fsm.On("main", "net", cmds.NetStatsHandler)
-    fsm.On("main", "net add $str", cmds.NetAddHandler)
-    fsm.On("main", "resolve $str", cmds.ResolveHandler)
-    fsm.On("main", "wallet generate", cmds.WalletGenerateHandler)
-    fsm.On("main", "wallet", cmds.WalletHandler)
-    fsm.On("main", "send", cmds.SendHandler)
+    fsm.On("main", "stats", cmd.StatsHandler)
+    fsm.On("main", "s", cmd.StatsHandler)
+    fsm.On("main", "balance $U256", cmd.BalanceHandler)
+    fsm.On("main", "mine $U256", cmd.MinerHandler)
+    fsm.On("main", "net", cmd.NetStatsHandler)
+    fsm.On("main", "net add $str", cmd.NetAddHandler)
+    fsm.On("main", "resolve $str", cmd.ResolveHandler)
+    fsm.On("main", "wallet generate", cmd.WalletGenerateHandler)
+    fsm.On("main", "wallet", cmd.WalletHandler)
+    fsm.On("main", "send", cmd.SendHandler)
     fsm.On("main", "exit", fcli.ExitHandler)
     fsm.On("main", "x", fcli.ExitHandler)
 
