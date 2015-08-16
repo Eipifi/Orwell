@@ -46,8 +46,8 @@ func (*SendCmd) Run(args []string) error {
         for _, out := range txn.Outputs {
             fmt.Printf("   recipient: %v amount: %v \n", out.Target, out.Value)
         }
-        fmt.Println("Spent in total:", txn.TotalOutput())
         fmt.Println("Fee:", fee)
+        fmt.Println("Spent in total:", txn.TotalOutput())
         fmt.Println("Balance after txn:", sum_input - txn.TotalOutput() - fee)
         fmt.Println("")
 

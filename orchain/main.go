@@ -2,10 +2,10 @@ package main
 import (
     "orwell/lib/config"
     "orwell/lib/logging"
-    "orwell/lib/cmd"
-    "orwell/orchain/command"
     "orwell/orchain/serv"
     "orwell/lib/db"
+    "orwell/lib/fcli"
+    "orwell/orchain/cmds"
 )
 
 func main() {
@@ -22,18 +22,22 @@ func main() {
     // Run server routines
     go serv.RunServer(config.GetInt("port"))
 
-    // Run the console
-    cmd.Run([]cmd.Command{
-        &command.StatsCmd{},
-        &command.MinerCmd{},
-        &command.NetCmd{},
-        &command.WalletCmd{},
-        &command.BalanceCmd{},
-        &command.LogCmd{},
-        &command.PayCmd{},
-        &command.ResolveCmd{},
-        &command.SendCmd{},
-    })
+    // Run the command-line finite state machine
+    fsm := fcli.NewFSM("> ")
+
+    fsm.On("main", "stats", cmds.StatsHandler)
+    fsm.On("main", "s", cmds.StatsHandler)
+    fsm.On("main", "balance $U256", cmds.BalanceHandler)
+    fsm.On("main", "mine $U256", cmds.MinerHandler)
+    fsm.On("main", "net add $str", cmds.NetAddHandler)
+    fsm.On("main", "resolve $str", cmds.ResolveHandler)
+    fsm.On("main", "wallet generate", cmds.WalletGenerateHandler)
+    fsm.On("main", "wallet", cmds.WalletHandler)
+    fsm.On("main", "send", cmds.SendHandler)
+    fsm.On("main", "exit", fcli.ExitHandler)
+    fsm.On("main", "x", fcli.ExitHandler)
+
+    fsm.Run("main")
 }
 
 /*

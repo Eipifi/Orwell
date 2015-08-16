@@ -59,11 +59,38 @@ func (p *Payload) Write(w io.Writer) (err error) {
     return butils.WriteByte(w, 0x00)
 }
 
-func PayloadLabel2(label []byte) Payload {
+func PayloadDomain(domain Domain) Payload {
+    return Payload{Domain: &domain}
+}
+
+func PayloadTicket(ticket foo.U256) Payload {
+    return Payload{Ticket: &ticket}
+}
+
+func PayloadTransfer(transfer Transfer) Payload {
+    return Payload{Transfer: &transfer}
+}
+
+func PayloadLabelBytes(label []byte) Payload {
     return Payload{Label: &label}
 }
 
 func PayloadLabelString(label string) Payload {
-    return PayloadLabel2([]byte(label))
+    return PayloadLabelBytes([]byte(label))
 }
 
+func (p *Payload) String() string {
+    if p.Label != nil {
+        return "label: " + string(*p.Label)
+    }
+    if p.Ticket != nil {
+        return "ticket: " + p.Ticket.String()
+    }
+    if p.Domain != nil {
+        return "domain: " + p.Domain.String()
+    }
+    if p.Transfer != nil {
+        return "transfer: " + p.Transfer.String()
+    }
+    return "<empty>"
+}

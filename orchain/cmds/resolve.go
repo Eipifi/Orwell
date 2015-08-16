@@ -1,23 +1,11 @@
-package command
+package cmds
 import (
-    "fmt"
+    "orwell/lib/fcli"
     "orwell/lib/db"
-    "errors"
+    "fmt"
 )
 
-type ResolveCmd struct{}
-
-func (*ResolveCmd) Name() string {
-    return "resolve"
-}
-
-func (*ResolveCmd) Run(args []string) error {
-
-    if len(args) != 1 {
-        return errors.New("Usage: resolve <domain>")
-    }
-
-    domain_name := args[0]
+func ResolveHandler(domain_name string) fcli.Result {
 
     db.Get().View(func(t *db.Tx){
         domain := t.GetValidRegisteredDomain(domain_name)

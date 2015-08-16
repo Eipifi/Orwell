@@ -5,6 +5,7 @@ import (
     "orwell/lib/butils"
     "orwell/lib/crypto/hash"
     "orwell/lib/utils"
+    "fmt"
 )
 
 const DOMAIN_MAX_LENGTH uint64 = 32
@@ -44,4 +45,8 @@ func (d *Domain) ID() foo.U256 {
 func CheckDomainString(domain string) error {
     // TODO: perform lexical checks, ensure no special chars and whitespaces
     return nil
+}
+
+func (d *Domain) String() string {
+    return fmt.Sprintf("Domain{Name: %s, Owner: %v, ValidUntilBlock: %v}", d.Name, d.Owner, d.ValidUntilBlock)
 }

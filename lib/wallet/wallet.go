@@ -18,6 +18,10 @@ func (w *Wallet) ID() foo.U256 {
     return id
 }
 
+func (w *Wallet) PrvKey() *sig.PrvKey {
+    return &w.key
+}
+
 func (w *Wallet) CreateTransaction(bills []orchain.Bill, fee uint64, pld orchain.Payload) (txn *orchain.Transaction, err error) {
     // TODO: check for overflows
     id := w.ID()

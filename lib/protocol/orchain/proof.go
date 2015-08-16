@@ -31,3 +31,14 @@ func (p *Proof) CheckObject(w butils.Writable) error {
     if err != nil { return err }
     return p.Check(data)
 }
+
+func (p *Proof) Sign(w butils.Writable, key *sig.PrvKey) (err error) {
+    pk := key.PublicPart()
+    p.PublicKey = *pk
+    data, err := butils.WriteToBytes(w)
+    if err != nil { return }
+    sg, err := key.Sign(data)
+    if err != nil { return }
+    p.Signature = *sg
+    return
+}

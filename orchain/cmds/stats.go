@@ -1,18 +1,13 @@
-package command
+package cmds
 import (
-    "fmt"
     "orwell/lib/db"
-    "orwell/lib/protocol/orchain"
+    "fmt"
     "time"
+    "orwell/lib/protocol/orchain"
+    "orwell/lib/fcli"
 )
 
-type StatsCmd struct{}
-
-func (*StatsCmd) Name() string {
-    return "stats"
-}
-
-func (*StatsCmd) Run(args []string) error {
+func StatsHandler() fcli.Result {
 
     db.Get().View(func(t *db.Tx){
         state := t.GetState()
