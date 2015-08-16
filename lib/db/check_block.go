@@ -24,7 +24,7 @@ func CheckBlockHasAllDomains(t *Tx, b *orchain.Block) (err error) {
 
     if ! domains_required.Equal(domains_included) {
         return errors.New("The domain set of the block differs from the expected one.")
-        // TODO: print which domains constitute the difference
+        // print which domains constitute the difference ?
     }
     return nil
 }

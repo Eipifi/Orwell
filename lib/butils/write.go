@@ -39,7 +39,6 @@ func Uint64ToBytes(val uint64) []byte {
 }
 
 func WriteVarUint(w io.Writer, val uint64) (err error) {
-    // TODO: enforce single representation
     if val < 0xfd {
         return WriteUint8(w, uint8(val))
     }

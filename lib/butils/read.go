@@ -3,6 +3,7 @@ import (
     "io"
     "bytes"
     "encoding/binary"
+    "errors"
 )
 
 var ByteOrder = binary.BigEndian
@@ -57,17 +58,26 @@ func BytesToUint64(data []byte) uint64 {
 }
 
 func ReadVarUint(r io.Reader) (uint64, error) {
+    // Integer bounds are enforced in order to ensure that each number has exactly one representation.
+    // Even though technically correct, this could create a problem with different block hashes for different integer representations.
     v, err := ReadUint8(r)
     if err != nil { return 0, err }
     switch v {
         case 0xfd:
             v, err := ReadUint16(r)
+            if err != nil { return 0, err }
+            if v < 0xfd { return 0, errors.New("Illegal VarUint format") }
             return uint64(v), err
         case 0xfe:
             v, err := ReadUint32(r)
+            if err != nil { return 0, err }
+            if v <= 0xffff { return 0, errors.New("Illegal VarUint format") }
             return uint64(v), err
         case 0xff:
-            return ReadUint64(r)
+            v, err := ReadUint64(r)
+            if err != nil { return 0, err }
+            if v <= 0xffffffff { return 0, errors.New("Illegal VarUint format") }
+            return v, err
     }
     return uint64(v), nil
 }
