@@ -8,10 +8,12 @@ import (
 var BUCKET_DOMAIN = []byte("domain")
 var BUCKET_REGISTERED_DOMAIN = []byte("domain_registered")
 
-func (t *Tx) GetDomain(id foo.U256) (d *orchain.Domain) {
-    d = &orchain.Domain{}
-    t.Read(BUCKET_DOMAIN, id[:], d)
-    return
+func (t *Tx) GetDomain(id foo.U256) *orchain.Domain {
+    d := &orchain.Domain{}
+    if t.Read(BUCKET_DOMAIN, id[:], d) {
+        return d
+    }
+    return nil
 }
 
 func (t *Tx) PutDomain(d *orchain.Domain) {
@@ -19,10 +21,24 @@ func (t *Tx) PutDomain(d *orchain.Domain) {
     t.Write(BUCKET_DOMAIN, id[:], d)
 }
 
-func (t *Tx) GetRegisteredDomain(name string) (d *orchain.Domain) {
-    d = &orchain.Domain{}
-    t.Read(BUCKET_REGISTERED_DOMAIN, []byte(name), d)
-    return
+func (t *Tx) GetRegisteredDomain(name string) *orchain.Domain {
+    d := &orchain.Domain{}
+    if t.Read(BUCKET_REGISTERED_DOMAIN, []byte(name), d) {
+        utils.Assert(d.Name == name)
+        return d
+    }
+    return nil
+}
+
+func (t *Tx) GetValidRegisteredDomain(name string) (*orchain.Domain) {
+    d := t.GetRegisteredDomain(name)
+    if d == nil { return nil }
+    s := t.GetState()
+    if d.ValidUntilBlock >= s.Length {
+        return d
+    } else {
+        return nil
+    }
 }
 
 func (t *Tx) RegisterDomain(d *orchain.Domain) {
@@ -32,7 +48,7 @@ func (t *Tx) RegisterDomain(d *orchain.Domain) {
 func (t *Tx) DomainsToRegister(txns []orchain.Transaction) (domains []orchain.Domain) {
 
     // iterate over transactions, collect transfers and announcements
-    var just_announced map[foo.U256] orchain.Domain
+    just_announced := make(map[foo.U256] orchain.Domain)
     for _, txn := range txns {
         if txn.Payload.Transfer != nil {
             domains = append(domains, txn.Payload.Transfer.Domain)
@@ -69,7 +85,7 @@ func (t *Tx) DomainsToRegister(txns []orchain.Transaction) (domains []orchain.Do
         if domain != nil {
             // The domain was announced for the ticket.
             // Now check if the domain can be registered.
-            if t.IsDomainFree(domain.Name) {
+            if t.GetValidRegisteredDomain(domain.Name) == nil {
                 domains = append(domains, *domain)
             }
         }
@@ -77,23 +93,9 @@ func (t *Tx) DomainsToRegister(txns []orchain.Transaction) (domains []orchain.Do
     return domains
 }
 
-func (t *Tx) IsDomainFree(name string) bool {
-    reg_domain := t.GetRegisteredDomain(name)
-    if reg_domain != nil {
-        utils.Assert(reg_domain.Name == name) // just to be sure
-        state := t.GetState()
-        if reg_domain.ValidUntilBlock >= state.Length {
-            return false
-        }
-    }
-    return true
-}
-
 func (t *Tx) IsTransferLegal(transfer *orchain.Transfer) bool {
     if transfer.Proof.CheckObject(&transfer.Domain) != nil { return false }
-    reg_domain := t.GetRegisteredDomain(transfer.Domain.Name)
+    reg_domain := t.GetValidRegisteredDomain(transfer.Domain.Name)
     if reg_domain == nil { return false }
-    state := t.GetState()
-    if reg_domain.ValidUntilBlock < state.Length { return false }
     return reg_domain.Owner == transfer.Proof.PublicKey.ID()
 }

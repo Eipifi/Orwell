@@ -10,3 +10,7 @@ func (t *Tx) PutTicket(ticket foo.U256) {
 func (t *Tx) IsTicket(ticket foo.U256) bool {
     return t.Get(BUCKET_TICKET, ticket[:]) != nil
 }
+
+func (t *Tx) AllowedTickets() uint64 {
+    return 100
+}

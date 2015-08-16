@@ -30,6 +30,8 @@ func CheckTxnProof(t *Tx, txn *orchain.Transaction, is_first bool) error {
 func CheckTxnInputsUnspent(t *Tx, txn *orchain.Transaction, is_first bool) error {
     if is_first {
         if len(txn.Inputs) != 0 { return errors.New("Coinbase transaction can have no inputs") }
+    } else {
+        if len(txn.Inputs) == 0 { return errors.New("Normal transaction must have at least one input") }
     }
     for _, inp := range txn.Inputs {
         if t.GetBillStatus(&inp) != UNSPENT { return errors.New("Input bill is already spent or does not exist") }

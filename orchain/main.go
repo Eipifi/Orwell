@@ -31,6 +31,8 @@ func main() {
         &command.BalanceCmd{},
         &command.LogCmd{},
         &command.PayCmd{},
+        &command.ResolveCmd{},
+        &command.SendCmd{},
     })
 }
 

@@ -36,7 +36,7 @@ func (*PayCmd) Run(args []string) error {
     fmt.Println("Enter the fee:")
     fee := cmd.ReadUint64(0, wallet.Balance() - bill.Value)
 
-    txn, err := wallet.CreateTransaction([]orchain.Bill{bill}, fee)
+    txn, err := wallet.CreateTransaction([]orchain.Bill{bill}, fee, orchain.Payload{})
 
     fmt.Printf("%+v \n", txn)
 
