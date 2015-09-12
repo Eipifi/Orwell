@@ -24,6 +24,7 @@ func (m *SyncManager) syncLoop() {
         peers := ConnMgr().GetRandomPeers(1)
         if len(peers) > 0 {
             if err := m.sync(peers[0]); err != nil {
+                m.log.Printf("Failed to sync: %v\n", err)
                 peers[0].Close()
             }
         }

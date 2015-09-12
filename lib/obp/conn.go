@@ -50,7 +50,7 @@ func (c *Conn) sender() {
             c.log.Printf("Failed to write frame: %s", err)
             return
         }
-        c.log.Println("Sent %v", f)
+        //c.log.Println("Sent %v", f)
     }
 }
 
@@ -64,7 +64,7 @@ func (c *Conn) receiver() {
             c.log.Printf("Failed to read frame: %s", err)
             return
         }
-        c.log.Printf("Received %+v", f)
+        //c.log.Printf("Received %+v", f)
         if f.Context % 2 == 0 {
             maybeWrite(c.dnstream, f)
         } else {

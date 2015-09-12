@@ -1,8 +1,5 @@
 package orchain
-import (
-    "orwell/lib/foo"
-    "orwell/lib/utils"
-)
+import "orwell/lib/foo"
 
 var GENESIS_DIFFICULTY foo.U256 = foo.ZERO
 const BLOCKS_PER_DIFFICULTY_CHANGE = 32
@@ -28,7 +25,7 @@ func GenesisBlock() (b *Block) {
         },
     }
     b.Domains = []Domain{}
-    utils.Ensure(b.ComputeMerkleRoot())
+    b.ComputeMerkleRoot()
     // TODO: make a hash check
     return
 }

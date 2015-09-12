@@ -5,13 +5,11 @@ import (
     "errors"
 )
 
-func (b *Block) ComputeMerkleRoot() error {
-    root, err := getMerkleRoot(b.Transactions, b.Domains)
-    if err == nil { b.Header.MerkleRoot = root }
-    return err
+func (b *Block) ComputeMerkleRoot() {
+    b.Header.MerkleRoot = getMerkleRoot(b.Transactions, b.Domains)
 }
 
-func getMerkleRoot(txns []Transaction, domains []Domain) (hash foo.U256, err error) {
+func getMerkleRoot(txns []Transaction, domains []Domain) (hash foo.U256) {
     var ids []foo.U256
     for _, txn := range txns {
         ids = append(ids, txn.ID())
@@ -19,12 +17,11 @@ func getMerkleRoot(txns []Transaction, domains []Domain) (hash foo.U256, err err
     for _, dmn := range domains {
         ids = append(ids, dmn.ID())
     }
-    return merkle.Compute(ids), nil
+    return merkle.Compute(ids)
 }
 
 func (b *Block) CheckMerkleRoot() error {
-    root, err := getMerkleRoot(b.Transactions, b.Domains)
-    if err != nil { return err }
+    root := getMerkleRoot(b.Transactions, b.Domains)
     if foo.Compare(b.Header.MerkleRoot, root) == 0 { return nil }
     return errors.New("Merkle roots do not match")
 }
