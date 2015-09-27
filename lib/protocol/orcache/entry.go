@@ -27,7 +27,3 @@ func (e *Entry) Write(w io.Writer) (err error) {
     if err = butils.WriteVarBytes(w, e.Value, SIZE_VALUE); err != nil { return }
     return
 }
-
-func NewEntry(key, tpe, value string) Entry {
-    return Entry{Key: []byte(key), Type: []byte(tpe), Value: []byte(value)}
-}

@@ -42,6 +42,15 @@ func main() {
 
             },
         },
+        {
+            Name: "viewcard",
+            Aliases: []string{"v"},
+            Usage: "view a card",
+            Action: cmd.ViewCardAction,
+            Flags: []cli.Flag {
+
+            },
+        },
     }
 
     app.Run(os.Args)

@@ -6,6 +6,8 @@ import (
     "orwell/lib/db"
     "orwell/lib/fcli"
     "orwell/orchain/cmd"
+    "orwell/lib/utils"
+    "orwell/lib/obp"
 )
 
 func main() {
@@ -20,7 +22,9 @@ func main() {
     serv.Bootstrap()
 
     // Run server routines
-    go serv.RunServer(config.GetInt("port"))
+    go func() {
+        utils.Ensure(obp.Serve(config.GetInt("port"), serv.Talk))
+    }()
 
     // Run the command-line finite state machine
     fsm := fcli.NewFSM("> ")
@@ -35,6 +39,8 @@ func main() {
     fsm.On("main", "wallet generate", cmd.WalletGenerateHandler)
     fsm.On("main", "wallet", cmd.WalletHandler)
     fsm.On("main", "send", cmd.SendHandler)
+    fsm.On("main", "block $uint64", cmd.BlockByNumHandler)
+    fsm.On("main", "pop", cmd.PopHandler)
     fsm.On("main", "exit", fcli.ExitHandler)
     fsm.On("main", "x", fcli.ExitHandler)
 

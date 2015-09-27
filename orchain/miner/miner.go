@@ -8,6 +8,7 @@ import (
     "log"
     "orwell/orchain/serv"
     "orwell/lib/utils"
+    "fmt"
 )
 
 type SimpleMiner struct {
@@ -66,7 +67,7 @@ func prepareBlock(wallet foo.U256) (block *orchain.Block) {
                         Value: orchain.GetReward(state.Length),
                     },
                 },
-                Payload: orchain.PayloadLabelString("Block #" + string(state.Length)),
+                Payload: orchain.PayloadLabelString(fmt.Sprintf("Block #%v", state.Length)),
             },
         }
         block.Transactions = append(block.Transactions, t.UnconfirmedTransactions()...)

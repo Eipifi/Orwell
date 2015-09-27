@@ -1,6 +1,7 @@
 package db
 import (
     "orwell/lib/protocol/orchain"
+    "fmt"
 )
 
 func (t *Tx) PushBlock(block *orchain.Block) error {
@@ -17,6 +18,7 @@ func (t *Tx) PushBlock(block *orchain.Block) error {
     s.Work = s.Work.Plus(block.Header.Difficulty)
     t.PutState(s)
     t.RefreshUnconfirmedTransactions()
+    fmt.Printf("PUSHED %+v \n", block)
     return nil
 }
 

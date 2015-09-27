@@ -3,10 +3,13 @@ import (
     "orwell/lib/protocol/orchain"
     "orwell/lib/foo"
     "orwell/lib/utils"
+    "orwell/lib/butils"
+    "bytes"
 )
 
 var BUCKET_DOMAIN = []byte("domain")
 var BUCKET_REGISTERED_DOMAIN = []byte("domain_registered")
+var BUCKET_DOMAIN_BLOCK   = []byte("domain_block")
 
 func (t *Tx) GetDomain(id foo.U256) *orchain.Domain {
     d := &orchain.Domain{}
@@ -58,14 +61,14 @@ func (t *Tx) DomainsToRegister(txns []orchain.Transaction) (domains []orchain.Do
         }
     }
 
-    state := t.GetState()
     var tickets []foo.U256
     // get the tickets announced previously
+    state := t.GetState()
     if state.Length >= orchain.BLOCKS_UNTIL_DOMAIN_CONFIRMED {
         prev_bid := t.GetIDByNum(state.Length - orchain.BLOCKS_UNTIL_DOMAIN_CONFIRMED)
         utils.Assert(prev_bid != nil)
-        prev := t.GetBlock(*prev_bid)
-        for _, txn := range prev.Transactions {
+        txns := t.GetTransactionsFromBlock(*prev_bid)
+        for _, txn := range txns {
             if txn.Payload.Ticket != nil {
                 tickets = append(tickets, *txn.Payload.Ticket)
             }
@@ -91,6 +94,7 @@ func (t *Tx) DomainsToRegister(txns []orchain.Transaction) (domains []orchain.Do
         }
     }
     return domains
+
 }
 
 func (t *Tx) IsTransferLegal(transfer *orchain.Transfer) bool {
@@ -98,4 +102,18 @@ func (t *Tx) IsTransferLegal(transfer *orchain.Transfer) bool {
     reg_domain := t.GetValidRegisteredDomain(transfer.Domain.Name)
     if reg_domain == nil { return false }
     return reg_domain.Owner == transfer.Proof.PublicKey.ID()
+}
+
+func (t *Tx) PutRegisteredDomainsFromBlock(id foo.U256, domains []orchain.Domain) {
+    buf := bytes.Buffer{}
+    utils.Ensure(butils.WriteSlice(&buf, orchain.BLOCK_DOMAIN_MAX, domains))
+    t.Put(BUCKET_DOMAIN_BLOCK, id[:], buf.Bytes())
+}
+
+func (t *Tx) GetDomainsFromBlock(id foo.U256) (domains []orchain.Domain) {
+    data := t.Get(BUCKET_DOMAIN_BLOCK, id[:])
+    if data == nil { return }
+    buf := bytes.NewBuffer(data)
+    utils.Ensure(butils.ReadSlice(buf, orchain.BLOCK_DOMAIN_MAX, &domains))
+    return
 }

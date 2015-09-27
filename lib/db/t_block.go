@@ -3,28 +3,19 @@ import (
     "orwell/lib/protocol/orchain"
     "orwell/lib/foo"
     "orwell/lib/butils"
-    "bytes"
-    "io"
-    "orwell/lib/utils"
 )
 
 var BUCKET_HEADER     = []byte("header")
 var BUCKET_HID_NUM    = []byte("hid_num")
 var BUCKET_NUM_HID    = []byte("num_hid")
-var BUCKET_TXN_LIST   = []byte("txn_list")
 
 func (t *Tx) PutBlock(block *orchain.Block, num uint64) {
     bid := block.Header.ID()
     t.Put(BUCKET_NUM_HID, butils.Uint64ToBytes(num), bid[:])
     t.Put(BUCKET_HID_NUM, bid[:], butils.Uint64ToBytes(num))
     t.Write(BUCKET_HEADER, bid[:], &block.Header)
-    buf := &bytes.Buffer{}
-    for _, txn := range block.Transactions {
-        tid := txn.ID()
-        tid.Write(buf)
-        t.PutTransaction(&txn)
-    }
-    t.Put(BUCKET_TXN_LIST, bid[:], buf.Bytes())
+    t.PutTransactionsFromBlock(bid, block.Transactions)
+    t.PutRegisteredDomainsFromBlock(bid, block.Domains)
 }
 
 func (t *Tx) GetBlock(id foo.U256) (b *orchain.Block) {
@@ -32,16 +23,8 @@ func (t *Tx) GetBlock(id foo.U256) (b *orchain.Block) {
     if h == nil { return }
     b = &orchain.Block{}
     b.Header = *h
-    tids := t.Get(BUCKET_TXN_LIST, id[:])
-    buf := bytes.NewBuffer(tids)
-    for {
-        var tid foo.U256
-        err := tid.Read(buf)
-        if err == io.EOF { break }
-        utils.Ensure(err)
-        txn := t.GetTransaction(tid)
-        b.Transactions = append(b.Transactions, *txn)
-    }
+    b.Transactions = t.GetTransactionsFromBlock(id)
+    b.Domains = t.GetDomainsFromBlock(id)
     return
 }
 
